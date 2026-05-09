@@ -46,7 +46,7 @@ The library kept the things the SPEC was right about: zero unsafe,
 zero allocations on the hot path with `expected_duration` reservation,
 EBU 3341 14/14, cross-validated against the `ebur128` reference.
 
-[0.2.0]: https://github.com/vanja/ebur128-stream/releases/tag/v0.2.0
+[0.2.0]: https://github.com/vanjamodrinjak21/ebur128-stream/releases/tag/v0.2.0
 
 ## [0.1.2] — 2026-05-09
 
@@ -105,5 +105,5 @@ EBU 3341 14/14, cross-validated against the `ebur128` reference.
 - License: MIT OR Apache-2.0
 - Independent verification against EBU Tech 3341 test vectors is in progress; calibration self-tests in `tests/calibration.rs` provide internal-consistency proofs in the meantime
 
-[Unreleased]: https://github.com/vanja/ebur128-stream/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/vanja/ebur128-stream/releases/tag/v0.1.0
+[Unreleased]: https://github.com/vanjamodrinjak21/ebur128-stream/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/vanjamodrinjak21/ebur128-stream/releases/tag/v0.1.0

@@ -1,32 +1,39 @@
-//! WebAssembly bindings via [`wasm-bindgen`].
+//! WebAssembly bindings for `ebur128-stream` via [`wasm-bindgen`].
 //!
-//! Enabled by the `wasm` feature. Build with:
+//! This is a separate crate so the main `ebur128-stream` crate stays
+//! `no_std`-friendly (a `cdylib` no_std build needs a custom
+//! `#[panic_handler]` that this binding doesn't need).
+//!
+//! Build:
 //!
 //! ```bash
-//! cargo build --target wasm32-unknown-unknown --no-default-features --features wasm,alloc
-//! wasm-bindgen target/wasm32-unknown-unknown/debug/ebur128_stream.wasm \
+//! cd bindings/wasm
+//! wasm-pack build --target web
+//! # or manually:
+//! cargo build --target wasm32-unknown-unknown --release
+//! wasm-bindgen target/wasm32-unknown-unknown/release/ebur128_stream_wasm.wasm \
 //!   --out-dir pkg --target web
 //! ```
 //!
 //! The generated TypeScript surface looks like:
 //!
 //! ```text
-//! const a = new WasmAnalyzer(48000, 2, 0xFF);
+//! const a = new WasmAnalyzer(48000, 2, 31);   // modes = Mode::All
 //! a.push_interleaved(new Float32Array([...]));
 //! const r = a.finalize();
 //! console.log(r.integrated_lufs);
 //! ```
 //!
-//! Modes are passed as a `u8` matching the [`Mode`](crate::Mode)
+//! Modes are passed as a `u8` matching the
+//! [`ebur128_stream::Mode`](https://docs.rs/ebur128-stream/latest/ebur128_stream/struct.Mode.html)
 //! bitflags representation.
 
-use crate::{Analyzer, AnalyzerBuilder, Channel, Mode, Report};
+use ebur128_stream::{Analyzer, AnalyzerBuilder, Channel, Mode, Report};
 use wasm_bindgen::prelude::*;
 
 /// Convert a numeric channel-count into a default channel layout
 /// (`L, R` for 2; `L, R, C, LFE, Ls, Rs` for 6; otherwise `Other` ×N).
-fn default_layout(n: u32) -> alloc::vec::Vec<Channel> {
-    use alloc::vec;
+fn default_layout(n: u32) -> Vec<Channel> {
     match n {
         1 => vec![Channel::Center],
         2 => vec![Channel::Left, Channel::Right],
@@ -52,7 +59,7 @@ pub struct WasmAnalyzer {
 impl WasmAnalyzer {
     /// Construct a new analyzer.
     ///
-    /// `modes` is the bit OR of [`Mode`](crate::Mode) values:
+    /// `modes` is the bit OR of [`Mode`](ebur128_stream::Mode) values:
     /// `Integrated = 1, Momentary = 2, ShortTerm = 4, TruePeak = 8,
     /// Lra = 16, All = 31`.
     #[wasm_bindgen(constructor)]
@@ -64,7 +71,7 @@ impl WasmAnalyzer {
             .channels(&layout)
             .modes(modes)
             .build()
-            .map_err(|e| JsError::new(&alloc::format!("{e}")))?;
+            .map_err(|e| JsError::new(&format!("{e}")))?;
         Ok(WasmAnalyzer { inner })
     }
 
@@ -72,7 +79,7 @@ impl WasmAnalyzer {
     pub fn push_interleaved(&mut self, samples: &[f32]) -> Result<(), JsError> {
         self.inner
             .push_interleaved::<f32>(samples)
-            .map_err(|e| JsError::new(&alloc::format!("{e}")))
+            .map_err(|e| JsError::new(&format!("{e}")))
     }
 
     /// Take a current measurement snapshot.

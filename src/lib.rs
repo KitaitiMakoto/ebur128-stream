@@ -144,10 +144,6 @@ mod sink;
 mod snapshot;
 #[cfg(feature = "svg")]
 pub mod svg;
-#[cfg(feature = "wasm")]
-mod wasm;
-#[cfg(feature = "wasm")]
-pub use wasm::{WasmAnalyzer, WasmReport, WasmSnapshot};
 
 pub use analyzer::{Analyzer, AnalyzerBuilder};
 pub use channel::Channel;

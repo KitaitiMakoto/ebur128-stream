@@ -236,7 +236,7 @@ The first 500 lines of `lib.rs` are docs, not code. Structure:
 //! ## See also
 //! - [`bs1770`] for filter-only, no gating
 //! - [`ebur128`] for libebur128 FFI bindings
-//! - [Mediq](https://github.com/vanja/Mediq) — terminal video player using this crate
+//! - [Mediq](https://github.com/vanjamodrinjak21/Mediq) — terminal video player using this crate
 ```
 
 The "Concepts" section in the docs is what makes this crate's docs.rs page a *teaching artifact*. Most loudness libraries assume you know what LUFS is. Most of your readers don't. Explain it.

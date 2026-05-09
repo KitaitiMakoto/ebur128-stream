@@ -1,0 +1,16 @@
+[package]
+name = "ebur128-stream-wasm"
+version = "0.2.0"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+description = "WebAssembly bindings for ebur128-stream."
+publish = false
+
+[lib]
+name = "ebur128_stream_wasm"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+ebur128-stream = { path = "../..", default-features = false, features = ["std", "alloc"] }
+wasm-bindgen = "0.2"

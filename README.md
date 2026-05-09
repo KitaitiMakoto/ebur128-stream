@@ -4,8 +4,8 @@
 
 [![crates.io](https://img.shields.io/crates/v/ebur128-stream.svg)](https://crates.io/crates/ebur128-stream)
 [![docs.rs](https://docs.rs/ebur128-stream/badge.svg)](https://docs.rs/ebur128-stream)
-[![CI](https://github.com/vanja/ebur128-stream/workflows/CI/badge.svg)](https://github.com/vanja/ebur128-stream/actions)
-[![codecov](https://codecov.io/gh/vanja/ebur128-stream/branch/main/graph/badge.svg)](https://codecov.io/gh/vanja/ebur128-stream)
+[![CI](https://github.com/vanjamodrinjak21/ebur128-stream/workflows/CI/badge.svg)](https://github.com/vanjamodrinjak21/ebur128-stream/actions)
+[![codecov](https://codecov.io/gh/vanjamodrinjak21/ebur128-stream/branch/main/graph/badge.svg)](https://codecov.io/gh/vanjamodrinjak21/ebur128-stream)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 [![MSRV 1.85](https://img.shields.io/badge/MSRV-1.85-blue.svg)](#)
 [![unsafe forbidden](https://img.shields.io/badge/unsafe-forbidden-success.svg)](#)

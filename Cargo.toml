@@ -6,7 +6,7 @@ rust-version = "1.85"
 license = "MIT OR Apache-2.0"
 description = "Streaming, zero-allocation EBU R128 loudness measurement in pure Rust."
 documentation = "https://docs.rs/ebur128-stream"
-repository = "https://github.com/vanja/ebur128-stream"
+repository = "https://github.com/vanjamodrinjak21/ebur128-stream"
 readme = "README.md"
 keywords = ["audio", "dsp", "loudness", "ebur128", "bs1770"]
 categories = ["multimedia::audio", "no-std"]
@@ -23,7 +23,6 @@ svg = ["std"]
 normalize = ["std"]
 resampler = ["dep:rubato", "std"]
 simd = ["dep:wide", "std"]
-wasm = ["dep:wasm-bindgen", "std"]
 
 [dependencies]
 bitflags = { version = "2", default-features = false }
@@ -33,7 +32,6 @@ futures-sink = { version = "0.3", optional = true, default-features = false }
 hound = { version = "3", optional = true }
 rubato = { version = "0.15", optional = true, default-features = false }
 wide = { version = "0.7", optional = true, default-features = false }
-wasm-bindgen = { version = "0.2", optional = true }
 
 [dev-dependencies]
 hound = "3"
@@ -46,9 +44,6 @@ name = "throughput"
 harness = false
 
 [lib]
-# cdylib is required for the wasm-bindgen target to produce a .wasm
-# artifact. rlib stays so the crate works as a regular Rust dep.
-crate-type = ["cdylib", "rlib"]
 bench = false
 
 [[bin]]

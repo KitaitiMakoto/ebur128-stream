@@ -1,7 +1,7 @@
 //! Dynamic SVG VU meter rendering.
 //!
 //! The visual style mirrors the
-//! [FestivalPlayout](https://github.com/vanja/FestivalPlayout) live VU
+//! [FestivalPlayout](https://github.com/vanjamodrinjak21/FestivalPlayout) live VU
 //! meters (vertical segmented bars per channel — green from −60..−12,
 //! yellow from −12..−3, red from −3..+6, peak-hold line with ballistic
 //! decay, dB scale on the right) but produces a self-contained SVG
