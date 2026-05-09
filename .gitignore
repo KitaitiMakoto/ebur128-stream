@@ -1,0 +1,26 @@
+/target
+**/*.rs.bk
+Cargo.lock.bak
+*.pdb
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Criterion artifacts (kept out of git; bench-results.md is the human summary)
+/criterion-results/
+
+# ---- Authoring / planning artifacts (kept local, not pushed) ----
+/01-crate-skeleton/
+/02-kweighting-momentary/
+/03-integrated-gating/
+/04-true-peak-lra/
+/05-examples-benchmarks/
+/06-docs-release/
+/deep_project_interview.md
+/deep_project_session.json
+/project-manifest.md
+

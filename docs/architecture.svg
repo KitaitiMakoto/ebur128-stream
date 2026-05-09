@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="380" viewBox="0 0 900 380" font-family="ui-monospace, 'SF Mono', Menlo, monospace">
+  <style>
+    .block { fill: #1f2937; stroke: #6366f1; stroke-width: 1.5; }
+    .label { fill: #f9fafb; font-size: 13px; }
+    .sub   { fill: #9ca3af; font-size: 11px; }
+    .arrow { stroke: #6366f1; stroke-width: 1.5; fill: none; marker-end: url(#a); }
+    .out   { fill: #10b981; font-size: 12px; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#6366f1"/>
+    </marker>
+  </defs>
+
+  <!-- Input -->
+  <rect x="20" y="160" width="160" height="60" rx="6" class="block"/>
+  <text x="100" y="185" text-anchor="middle" class="label">push_planar /</text>
+  <text x="100" y="202" text-anchor="middle" class="label">push_interleaved</text>
+  <text x="100" y="240" text-anchor="middle" class="sub">any chunk size</text>
+
+  <!-- K-weighting -->
+  <rect x="220" y="60" width="170" height="80" rx="6" class="block"/>
+  <text x="305" y="90" text-anchor="middle" class="label">K-weighting filter</text>
+  <text x="305" y="108" text-anchor="middle" class="sub">2× cascaded biquad</text>
+  <text x="305" y="124" text-anchor="middle" class="sub">per channel (DF1)</text>
+
+  <!-- True peak -->
+  <rect x="220" y="240" width="170" height="80" rx="6" class="block"/>
+  <text x="305" y="270" text-anchor="middle" class="label">True peak FIR</text>
+  <text x="305" y="288" text-anchor="middle" class="sub">4× polyphase</text>
+  <text x="305" y="304" text-anchor="middle" class="sub">12 taps × 4 phases</text>
+
+  <!-- Block aggregator -->
+  <rect x="430" y="60" width="170" height="80" rx="6" class="block"/>
+  <text x="515" y="90" text-anchor="middle" class="label">100 ms block</text>
+  <text x="515" y="108" text-anchor="middle" class="label">aggregator</text>
+  <text x="515" y="124" text-anchor="middle" class="sub">Σ K-weighted MS</text>
+
+  <!-- Sliding windows -->
+  <rect x="640" y="20" width="220" height="120" rx="6" class="block"/>
+  <text x="750" y="48" text-anchor="middle" class="label">Sliding M (400 ms, 4 blocks)</text>
+  <text x="750" y="66" text-anchor="middle" class="label">Sliding S (3 s, 30 blocks)</text>
+  <text x="750" y="92" text-anchor="middle" class="sub">→ Snapshot::M</text>
+  <text x="750" y="108" text-anchor="middle" class="sub">→ Snapshot::S</text>
+  <text x="750" y="124" text-anchor="middle" class="sub">→ Report.M_max / S_max</text>
+
+  <!-- Programme buffer + gating -->
+  <rect x="640" y="160" width="220" height="100" rx="6" class="block"/>
+  <text x="750" y="186" text-anchor="middle" class="label">Programme buffer (Vec)</text>
+  <text x="750" y="204" text-anchor="middle" class="sub">gated integrator (BS.1770 §5.6)</text>
+  <text x="750" y="222" text-anchor="middle" class="sub">→ Report.integrated_lufs</text>
+  <text x="750" y="240" text-anchor="middle" class="sub">LRA percentile (Tech 3342)</text>
+
+  <!-- Per-channel state for true peak -->
+  <rect x="640" y="280" width="220" height="60" rx="6" class="block"/>
+  <text x="750" y="304" text-anchor="middle" class="label">Per-channel max |y|</text>
+  <text x="750" y="322" text-anchor="middle" class="sub">→ Report.true_peak_dbtp</text>
+
+  <!-- Arrows -->
+  <path d="M 180 180 Q 200 180 220 110" class="arrow"/>
+  <path d="M 180 200 Q 200 200 220 280" class="arrow"/>
+  <path d="M 390 100 L 430 100" class="arrow"/>
+  <path d="M 600 90 Q 620 90 640 80" class="arrow"/>
+  <path d="M 600 110 Q 620 110 640 200" class="arrow"/>
+  <path d="M 390 280 Q 430 280 640 310" class="arrow"/>
+</svg>
