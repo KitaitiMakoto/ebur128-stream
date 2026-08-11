@@ -2,19 +2,12 @@
 
 require "rubygems/tasks"
 require "rake/testtask"
+require "kar/dsl"
 
 Gem::Tasks.new
 
-Rake::TestTask.new
+cargo "ebur128_stream"
 
-require "rb_sys/extensiontask"
+Rake::TestTask.new(test: :cargo)
 
-task build: :compile
-
-GEMSPEC = Gem::Specification.load("ebur128_stream.gemspec")
-
-RbSys::ExtensionTask.new("ebur128_stream", GEMSPEC) do |ext|
-  ext.lib_dir = "lib/ebur128_stream"
-end
-
-task default: %i[compile test]
+task default: :test

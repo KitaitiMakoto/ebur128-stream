@@ -14,3 +14,5 @@ mkmf.log
 target/
 Gemfile.lock
 /vendor/bundle/
+ext/ebur128_stream/.rustc_info.json
+ext/ebur128_stream/release/
