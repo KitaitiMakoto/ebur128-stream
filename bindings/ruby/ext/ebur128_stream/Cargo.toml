@@ -1,5 +1,5 @@
 [package]
-name = "ebur128_stream"
+name = "ebur128-stream"
 version = "0.1.0"
 edition = "2021"
 authors = ["Kitaiti Makoto <KitaitiMakoto@gmail.com>"]
