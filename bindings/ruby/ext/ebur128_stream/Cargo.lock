@@ -63,23 +63,23 @@ dependencies = [
 
 [[package]]
 name = "ebur128-stream"
+version = "0.1.0"
+dependencies = [
+ "ebur128-stream 0.2.0",
+ "magnus",
+ "rb-sys",
+ "rb-sys-env",
+ "rb-sys-test-helpers",
+]
+
+[[package]]
+name = "ebur128-stream"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "66e026ac32fee8397cdbaafee0030443af608d6c4832e590905b16c9450b7536"
 dependencies = [
  "bitflags",
  "libm",
-]
-
-[[package]]
-name = "ebur128_stream"
-version = "0.1.0"
-dependencies = [
- "ebur128-stream",
- "magnus",
- "rb-sys",
- "rb-sys-env",
- "rb-sys-test-helpers",
 ]
 
 [[package]]
