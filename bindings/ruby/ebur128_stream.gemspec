@@ -47,6 +47,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "test-unit"
   spec.add_development_dependency "rubygems-tasks"
   spec.add_development_dependency "rb_sys"
+  spec.add_development_dependency "kar"
 
   # For more information and examples about making a new gem, check out our
   # guide at: https://guides.rubygems.org/make-your-own-gem/
