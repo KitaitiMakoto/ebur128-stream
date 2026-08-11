@@ -3,6 +3,8 @@
 require "rubygems/tasks"
 require "rake/testtask"
 
+Gem::Tasks.new
+
 Rake::TestTask.new(:test) do |t|
   t.libs << "test"
   t.libs << "lib"
