@@ -12,3 +12,5 @@
 *.a
 mkmf.log
 target/
+Gemfile.lock
+/vendor/bundle/
