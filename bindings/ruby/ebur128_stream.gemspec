@@ -42,6 +42,11 @@ Gem::Specification.new do |spec|
   # spec.add_dependency "example-gem", "~> 1.0"
   spec.add_dependency "rb_sys", "~> 0.9.128"
 
+  spec.add_development_dependency "irb"
+  spec.add_development_dependency "rake"
+  spec.add_development_dependency "rake-compiler"
+  spec.add_development_dependency "test-unit"
+
   # For more information and examples about making a new gem, check out our
   # guide at: https://guides.rubygems.org/make-your-own-gem/
 end
