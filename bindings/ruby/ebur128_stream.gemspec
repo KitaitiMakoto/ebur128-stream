@@ -7,6 +7,7 @@ Gem::Specification.new do |spec|
   spec.version = Ebur128Stream::VERSION
   spec.authors = ["Kitaiti Makoto"]
   spec.email = ["KitaitiMakoto@gmail.com"]
+  spec.licenses = ["Apache-2.0", "MIT"]
 
   spec.summary = "TODO: Write a short summary, because RubyGems requires one."
   spec.description = "TODO: Write a longer description or delete this line."
