@@ -17,4 +17,4 @@ ebur128-stream = { version = "0.2.0" }
 rb-sys-env = "0.2.2"
 
 [dev-dependencies]
-rb-sys-test-helpers = { version = "0.2.2" }
+rb-sys-test-helpers = { version = "0.3.0" }
