@@ -26,4 +26,11 @@ class EBUR128StreamTest < Test::Unit::TestCase
       EBUR128Stream::Analyzer.new(channels: [:center], modes: [:unknown])
     end
   end
+
+  test "push_interleaved" do
+    analyzer = EBUR128Stream::Analyzer.new(channels: [:left, :right], modes: [:all])
+    assert_nothing_raised do
+      analyzer.push_interleaved [1.0, 1.0, 2.0, 2.0, 3.0, 3.0]
+    end
+  end
 end
