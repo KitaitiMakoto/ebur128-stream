@@ -4,7 +4,7 @@ require_relative "lib/ebur128_stream/version"
 
 Gem::Specification.new do |spec|
   spec.name = "ebur128_stream"
-  spec.version = Ebur128Stream::VERSION
+  spec.version = EBUR128Stream::VERSION
   spec.authors = ["Kitaiti Makoto"]
   spec.email = ["KitaitiMakoto@gmail.com"]
   spec.licenses = ["Apache-2.0", "MIT"]

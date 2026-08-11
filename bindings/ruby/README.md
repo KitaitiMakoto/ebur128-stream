@@ -1,4 +1,4 @@
-# Ebur128Stream
+# EBUR128Stream
 
 TODO: Delete this and the text below, and describe your gem
 
