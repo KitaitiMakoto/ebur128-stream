@@ -1,26 +1,26 @@
 use core::time::Duration;
 use ebur128_stream_rs::{Analyzer as AnalyzerRs, AnalyzerBuilder, Channel, Mode};
 use magnus::{
-    Error, Integer, RArray, Ruby, Symbol, Value, function, method,
+    Error, Integer, RArray, Ruby, Symbol, TryConvert, Value, function, method,
     prelude::*,
     scan_args::{get_kwargs, scan_args},
 };
+use std::cell::RefCell;
 
 #[magnus::wrap(class = "EBUR128Stream::Analyzer")]
 struct Analyzer {
     builder: Option<AnalyzerBuilder>,
-    analyzer: Option<AnalyzerRs>,
+    analyzer: RefCell<Option<AnalyzerRs>>,
 }
 
 impl Analyzer {
     fn new(ruby: &Ruby, args: &[Value]) -> Result<Self, Error> {
         let args = scan_args::<(), (), (), (), _, ()>(args)?;
-        let kws =
-            get_kwargs::<_, (RArray,), (Option<Integer>, Option<RArray>, Option<Integer>), ()>(
-                args.keywords,
-                &["channels"],
-                &["sample_rate", "modes", "expected_duration"],
-            )?;
+        let kws = get_kwargs::<_, (RArray,), (Option<Integer>, Option<RArray>, Option<Integer>), ()>(
+            args.keywords,
+            &["channels"],
+            &["sample_rate", "modes", "expected_duration"],
+        )?;
         let (channels,) = kws.required;
         let (sample_rate, modes, expected_duration) = kws.optional;
 
@@ -63,7 +63,12 @@ impl Analyzer {
                     "true_peak" => Mode::TruePeak,
                     "lra" => Mode::Lra,
                     "all" => Mode::All,
-                    _ => return Err(Error::new(ruby.exception_arg_error(), format!("unknown mode: {mode:?}")))
+                    _ => {
+                        return Err(Error::new(
+                            ruby.exception_arg_error(),
+                            format!("unknown mode: {mode:?}"),
+                        ));
+                    }
                 }
             }
             builder = builder.modes(modes);
@@ -79,8 +84,37 @@ impl Analyzer {
 
         Ok(Self {
             builder: None,
-            analyzer: Some(analyzer),
+            analyzer: RefCell::new(Some(analyzer)),
         })
+    }
+
+    fn push_interleaved(ruby: &Ruby, rb_self: &Self, samples: Value) -> Result<(), Error> {
+        // TODO: Accept MemoryView producer
+        // TODO: Consider chunking instead of converting whole samples at once
+        let samples = if let Some(array) = RArray::from_value(samples) {
+            array
+                .into_iter()
+                .map(TryConvert::try_convert)
+                .collect::<Result<Vec<f32>, Error>>()?
+        } else {
+            return Err(Error::new(
+                ruby.exception_arg_error(),
+                format!("unsupported samples type: {samples:?}"),
+            ));
+        };
+
+        let mut analyzer = rb_self
+            .analyzer
+            .try_borrow_mut()
+            .map_err(|_| Error::new(ruby.exception_runtime_error(), "analyser already in use"))?;
+        let analyzer = analyzer.as_mut().ok_or_else(|| {
+            Error::new(ruby.exception_runtime_error(), "analyzer not initialized")
+        })?;
+        analyzer.push_interleaved(&samples).map_err(|_| {
+            Error::new(ruby.exception_runtime_error(), "failed to push interleaved")
+        })?;
+
+        Ok(())
     }
 }
 
@@ -89,6 +123,7 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     let ebur128_stream = ruby.define_module("EBUR128Stream")?;
     let analyzer = ebur128_stream.define_class("Analyzer", ruby.class_object())?;
     analyzer.define_singleton_method("new", function!(Analyzer::new, -1))?;
+    analyzer.define_method("push_interleaved", method!(Analyzer::push_interleaved, 1))?;
 
     Ok(())
 }
