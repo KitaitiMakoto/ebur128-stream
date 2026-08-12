@@ -6,19 +6,10 @@ require "ebur128_stream/ebur128_stream"
 module EBUR128Stream
   class Error < StandardError; end
 
-  class Report
-    ATTRS = [
-      :integrated_lufs,
-      :loudness_range_lu,
-      :true_peak_dbtp,
-      :momentary_max_lufs,
-      :short_term_max_lufs,
-      :programme_duration_seconds
-    ]
-
+  module Reportable
     def deconstruct_keys(keys = nil)
-      keys = ATTRS if keys.nil?
-      (keys & ATTRS).inject({}) {|deconstructed, attr|
+      keys = self.class::ATTRS if keys.nil?
+      (keys & self.class::ATTRS).inject({}) {|deconstructed, attr|
         deconstructed[attr] = send(attr)
         deconstructed
       }
@@ -27,8 +18,21 @@ module EBUR128Stream
     def inspect
       "#<%{class} %{attrs}>" % {
         class: self.class,
-        attrs: ATTRS.collect {|attr| "#{attr}=#{send(attr) || nil.inspect}"}.join(" ")
+        attrs: self.class::ATTRS.collect {|attr| "#{attr}=#{send(attr) || nil.inspect}"}.join(" ")
       }
     end
+  end
+
+  class Report
+    include Reportable
+
+    ATTRS = [
+      :integrated_lufs,
+      :loudness_range_lu,
+      :true_peak_dbtp,
+      :momentary_max_lufs,
+      :short_term_max_lufs,
+      :programme_duration_seconds
+    ]
   end
 end
