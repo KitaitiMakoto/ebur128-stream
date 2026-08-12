@@ -1,5 +1,5 @@
 use core::time::Duration;
-use ebur128_stream_rs::{Analyzer as AnalyzerRs, AnalyzerBuilder, Channel, Mode};
+use ebur128_stream_rs::{Analyzer as AnalyzerRs, AnalyzerBuilder, Channel, Mode, Report as RsReport};
 use magnus::{
     Error, Integer, RArray, Ruby, Symbol, TryConvert, Value, function, method,
     prelude::*,
@@ -116,6 +116,10 @@ impl Analyzer {
 
         Ok(())
     }
+
+#[magnus::wrap(class = "EBUR128Stream::Report")]
+struct Report {
+    report: RsReport,
 }
 
 #[magnus::init]
@@ -124,6 +128,7 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     let analyzer = ebur128_stream.define_class("Analyzer", ruby.class_object())?;
     analyzer.define_singleton_method("new", function!(Analyzer::new, -1))?;
     analyzer.define_method("push_interleaved", method!(Analyzer::push_interleaved, 1))?;
+    let report = ebur128_stream.define_class("Report", ruby.class_object())?;
 
     Ok(())
 }
