@@ -18,7 +18,7 @@ module EBUR128Stream
     def inspect
       "#<%{class} %{attrs}>" % {
         class: self.class,
-        attrs: self.class::ATTRS.collect {|attr| "#{attr}=#{send(attr) || nil.inspect}"}.join(" ")
+        attrs: self.class::ATTRS.collect {|attr| "#{attr}=#{send(attr).inspect}"}.join(" ")
       }
     end
   end
