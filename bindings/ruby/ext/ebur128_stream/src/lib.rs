@@ -1,3 +1,4 @@
+mod memory_view;
 mod normalize;
 mod report;
 mod samples;
