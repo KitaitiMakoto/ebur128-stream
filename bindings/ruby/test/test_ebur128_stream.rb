@@ -32,6 +32,9 @@ class EBUR128StreamTest < Test::Unit::TestCase
     assert_nothing_raised do
       analyzer.push_interleaved [1.0, 1.0, 2.0, 2.0, 3.0, 3.0]
     end
+    assert_raise ArgumentError do
+      analyzer.push_interleaved [1.0, 1.0, 2.0]
+    end
   end
 
   test "push_planar" do
