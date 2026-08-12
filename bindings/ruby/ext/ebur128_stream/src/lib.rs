@@ -1,7 +1,5 @@
 use core::time::Duration;
-use ebur128_stream_rs::{
-    Analyzer as AnalyzerRs, AnalyzerBuilder, Channel, Error as RsError, Mode, Report as RsReport,
-};
+use ebur128_stream_rs as engine;
 use magnus::{
     Error, Integer, RArray, Ruby, Symbol, TryConvert, Value, function, method,
     prelude::*,
@@ -11,8 +9,8 @@ use std::cell::RefCell;
 
 #[magnus::wrap(class = "EBUR128Stream::Analyzer")]
 struct Analyzer {
-    builder: Option<AnalyzerBuilder>,
-    analyzer: RefCell<Option<AnalyzerRs>>,
+    builder: Option<engine::AnalyzerBuilder>,
+    analyzer: RefCell<Option<engine::Analyzer>>,
 }
 
 impl Analyzer {
@@ -26,10 +24,10 @@ impl Analyzer {
         let (channels,) = kws.required;
         let (sample_rate, modes, expected_duration) = kws.optional;
 
-        let channels: Vec<Channel> = channels
+        let channels: Vec<engine::Channel> = channels
             .into_iter()
             .map(|value| {
-                use Channel::*;
+                use engine::Channel::*;
 
                 let ch = Symbol::try_convert(value)?;
                 match ch.name()?.as_ref() {
@@ -48,13 +46,15 @@ impl Analyzer {
             })
             .collect::<Result<_, Error>>()?;
 
-        let mut builder = AnalyzerBuilder::new().channels(&channels);
+        let mut builder = engine::AnalyzerBuilder::new().channels(&channels);
 
         if let Some(sample_rate) = sample_rate {
             builder = builder.sample_rate(sample_rate.to_u32()?);
         }
 
         if let Some(values) = modes {
+            use engine::Mode;
+
             let mut modes = Mode::empty();
             for value in values.into_iter() {
                 let mode = Symbol::try_convert(value)?;
@@ -115,11 +115,11 @@ impl Analyzer {
         analyzer
             .push_interleaved(&samples)
             .map_err(|err| match err {
-                RsError::InterleavedLengthNotMultiple {
+                engine::Error::InterleavedLengthNotMultiple {
                     samples: _,
                     channels: _,
                 } => Error::new(ruby.exception_arg_error(), format!("{err:?}")),
-                RsError::NonFiniteSample => {
+                engine::Error::NonFiniteSample => {
                     Error::new(ruby.exception_arg_error(), format!("{err:?}"))
                 }
                 _ => unreachable!(),
@@ -160,14 +160,16 @@ impl Analyzer {
             Error::new(ruby.exception_runtime_error(), "analyzer not initialized")
         })?;
         analyzer.push_planar(&samples).map_err(|err| match err {
-            RsError::ChannelMismatch {
+            engine::Error::ChannelMismatch {
                 expected: _,
                 got: _,
             } => Error::new(ruby.exception_arg_error(), format!("{err:?}")),
-            RsError::PlanarLengthMismatch { first: _, got: _ } => {
+            engine::Error::PlanarLengthMismatch { first: _, got: _ } => {
                 Error::new(ruby.exception_arg_error(), format!("{err:?}"))
             }
-            RsError::NonFiniteSample => Error::new(ruby.exception_arg_error(), format!("{err:?}")),
+            engine::Error::NonFiniteSample => {
+                Error::new(ruby.exception_arg_error(), format!("{err:?}"))
+            }
             _ => unreachable!(),
         })?;
 
@@ -190,7 +192,7 @@ impl Analyzer {
 
 #[magnus::wrap(class = "EBUR128Stream::Report")]
 struct Report {
-    report: RsReport,
+    report: engine::Report,
 }
 
 #[magnus::init]
