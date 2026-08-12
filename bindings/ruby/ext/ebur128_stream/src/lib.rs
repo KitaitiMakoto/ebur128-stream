@@ -42,7 +42,7 @@ impl Analyzer {
                     "other" => Ok(Other),
                     _ => Err(Error::new(
                         ruby.exception_arg_error(),
-                        format!("unknown channel: {ch:?}"),
+                        format!("unknown channel: {ch}"),
                     )),
                 }
             })
@@ -70,7 +70,7 @@ impl Analyzer {
                     _ => {
                         return Err(Error::new(
                             ruby.exception_arg_error(),
-                            format!("unknown mode: {mode:?}"),
+                            format!("unknown mode: {mode}"),
                         ));
                     }
                 }
@@ -84,7 +84,7 @@ impl Analyzer {
         // TODO: Pend build() and call it just before calling push_xxx()
         let analyzer = builder
             .build()
-            .map_err(|err| Error::new(ruby.exception_runtime_error(), format!("{}", err)))?;
+            .map_err(|err| Error::new(ruby.exception_runtime_error(), format!("{err}")))?;
 
         Ok(Self {
             analyzer: RefCell::new(Some(analyzer)),
@@ -102,14 +102,14 @@ impl Analyzer {
         } else {
             return Err(Error::new(
                 ruby.exception_arg_error(),
-                format!("unsupported samples type: {samples:?}"),
+                format!("unsupported samples type: {samples}"),
             ));
         };
 
         let mut analyzer = rb_self
             .analyzer
             .try_borrow_mut()
-            .map_err(|_| Error::new(ruby.exception_runtime_error(), "analyser already in use"))?;
+            .map_err(|err| Error::new(ruby.exception_runtime_error(), format!("{err}")))?;
         let analyzer = analyzer.as_mut().ok_or_else(|| {
             Error::new(ruby.exception_runtime_error(), "analyzer not initialized")
         })?;
@@ -119,9 +119,9 @@ impl Analyzer {
                 engine::Error::InterleavedLengthNotMultiple {
                     samples: _,
                     channels: _,
-                } => Error::new(ruby.exception_arg_error(), format!("{err:?}")),
+                } => Error::new(ruby.exception_arg_error(), format!("{err}")),
                 engine::Error::NonFiniteSample => {
-                    Error::new(ruby.exception_arg_error(), format!("{err:?}"))
+                    Error::new(ruby.exception_arg_error(), format!("{err}"))
                 }
                 _ => unreachable!(),
             })?;
@@ -137,7 +137,7 @@ impl Analyzer {
                     let ch = RArray::from_value(channel).ok_or_else(|| {
                         Error::new(
                             ruby.exception_arg_error(),
-                            format!("channel not Array: {channel:?}"),
+                            format!("channel not Array: {channel}"),
                         )
                     })?;
                     ch.into_iter()
@@ -148,7 +148,7 @@ impl Analyzer {
         } else {
             return Err(Error::new(
                 ruby.exception_arg_error(),
-                format!("unsupported samples type: {samples:?}"),
+                format!("unsupported samples type: {samples}"),
             ));
         };
         let samples: Vec<&[f32]> = samples.iter().map(|channel| &channel[..]).collect();
@@ -164,14 +164,14 @@ impl Analyzer {
             engine::Error::ChannelMismatch {
                 expected: _,
                 got: _,
-            } => Error::new(ruby.exception_arg_error(), format!("{err:?}")),
+            } => Error::new(ruby.exception_arg_error(), format!("{err}")),
             engine::Error::PlanarLengthMismatch { first: _, got: _ } => {
-                Error::new(ruby.exception_arg_error(), format!("{err:?}"))
+                Error::new(ruby.exception_arg_error(), format!("{err}"))
             }
             engine::Error::NonFiniteSample => {
-                Error::new(ruby.exception_arg_error(), format!("{err:?}"))
+                Error::new(ruby.exception_arg_error(), format!("{err}"))
             }
-            _ => Error::new(ruby.exception_runtime_error(), format!("{err:?}")),
+            _ => Error::new(ruby.exception_runtime_error(), format!("{err}")),
         })?;
 
         Ok(())
