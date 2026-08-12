@@ -112,9 +112,18 @@ impl Analyzer {
         let analyzer = analyzer.as_mut().ok_or_else(|| {
             Error::new(ruby.exception_runtime_error(), "analyzer not initialized")
         })?;
-        analyzer.push_interleaved(&samples).map_err(|_| {
-            Error::new(ruby.exception_runtime_error(), "failed to push interleaved")
-        })?;
+        analyzer
+            .push_interleaved(&samples)
+            .map_err(|err| match err {
+                RsError::InterleavedLengthNotMultiple {
+                    samples: _,
+                    channels: _,
+                } => Error::new(ruby.exception_arg_error(), format!("{err:?}")),
+                RsError::NonFiniteSample => {
+                    Error::new(ruby.exception_arg_error(), format!("{err:?}"))
+                }
+                _ => unreachable!(),
+            })?;
 
         Ok(())
     }
@@ -151,9 +160,10 @@ impl Analyzer {
             Error::new(ruby.exception_runtime_error(), "analyzer not initialized")
         })?;
         analyzer.push_planar(&samples).map_err(|err| match err {
-            RsError::ChannelMismatch { expected: _, got: _ } => {
-                Error::new(ruby.exception_arg_error(), format!("{err:?}"))
-            }
+            RsError::ChannelMismatch {
+                expected: _,
+                got: _,
+            } => Error::new(ruby.exception_arg_error(), format!("{err:?}")),
             RsError::PlanarLengthMismatch { first: _, got: _ } => {
                 Error::new(ruby.exception_arg_error(), format!("{err:?}"))
             }
