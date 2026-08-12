@@ -1,5 +1,6 @@
 mod normalize;
 mod report;
+mod samples;
 
 use crate::report::Report;
 use core::time::Duration;

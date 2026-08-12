@@ -1,7 +1,7 @@
-use crate::parse_channels_arg;
+use crate::{parse_channels_arg, samples::InterleavedSamples};
 use ebur128_stream_rs as engine;
 use magnus::{
-    Error, RArray, RModule, Ruby, Value, function, method,
+    Error, RArray, RModule, Ruby, TryConvert, Value, function, method,
     prelude::*,
     scan_args::{get_kwargs, scan_args},
 };
@@ -34,6 +34,29 @@ impl Normalizer {
             target_lufs,
             true_peak_ceiling_dbtp,
         })
+    }
+
+    fn normalize_in_place(
+        ruby: &Ruby,
+        rb_self: &Self,
+        samples: Value,
+    ) -> Result<NormalizeReport, Error> {
+        let mut frames = InterleavedSamples::try_convert(samples)?;
+        let mut normalizer =
+            engine::normalize::Normalizer::new(rb_self.sample_rate, &rb_self.channels);
+        if let Some(target_lufs) = rb_self.target_lufs {
+            normalizer = normalizer.target_lufs(target_lufs);
+        }
+        if let Some(true_peak_ceiling_dbtp) = rb_self.true_peak_ceiling_dbtp {
+            normalizer = normalizer.true_peak_ceiling_dbtp(true_peak_ceiling_dbtp);
+        }
+
+        let report = normalizer
+            .normalize_in_place(frames.as_mut_slice())
+            .map_err(|err| Error::new(ruby.exception_runtime_error(), format!("{err}")))?;
+        frames.write_back_in_place()?;
+
+        Ok(NormalizeReport { report })
     }
 }
 
@@ -71,6 +94,10 @@ impl NormalizeReport {
 pub(crate) fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
     let normalizer = module.define_class("Normalizer", ruby.class_object())?;
     normalizer.define_singleton_method("new", function!(Normalizer::new, -1))?;
+    normalizer.define_method(
+        "normalize_in_place",
+        method!(Normalizer::normalize_in_place, 1),
+    )?;
 
     let normalize_report = module.define_class("NormalizeReport", ruby.class_object())?;
     normalize_report.define_method(
