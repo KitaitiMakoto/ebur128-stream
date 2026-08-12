@@ -1,3 +1,6 @@
+mod report;
+
+use crate::report::Report;
 use core::time::Duration;
 use ebur128_stream_rs as engine;
 use magnus::{
@@ -188,11 +191,6 @@ impl Analyzer {
     }
 }
 
-#[magnus::wrap(class = "EBUR128Stream::Report")]
-struct Report {
-    report: engine::Report,
-}
-
 #[magnus::init]
 fn init(ruby: &Ruby) -> Result<(), Error> {
     let ebur128_stream = ruby.define_module("EBUR128Stream")?;
@@ -201,7 +199,8 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     analyzer.define_method("push_interleaved", method!(Analyzer::push_interleaved, 1))?;
     analyzer.define_method("push_planar", method!(Analyzer::push_planar, 1))?;
     analyzer.define_method("finalize", method!(Analyzer::finalize, 0))?;
-    let report = ebur128_stream.define_class("Report", ruby.class_object())?;
+
+    report::init(ruby, &ebur128_stream)?;
 
     Ok(())
 }
