@@ -10,6 +10,33 @@ use magnus::{
 };
 use std::cell::RefCell;
 
+pub(crate) fn parse_channels_arg(
+    ruby: &Ruby,
+    channels: RArray,
+) -> Result<Vec<engine::Channel>, Error> {
+    use engine::Channel::*;
+
+    channels
+        .into_iter()
+        .map(|value| {
+            let ch = Symbol::try_convert(value)?;
+            match ch.name()?.as_ref() {
+                "left" => Ok(Left),
+                "right" => Ok(Right),
+                "center" => Ok(Center),
+                "left_surround" => Ok(LeftSurround),
+                "right_surround" => Ok(RightSurround),
+                "lfe" => Ok(Lfe),
+                "other" => Ok(Other),
+                _ => Err(Error::new(
+                    ruby.exception_arg_error(),
+                    format!("unknown channel: {ch}"),
+                )),
+            }
+        })
+        .collect()
+}
+
 #[magnus::wrap(class = "EBUR128Stream::Analyzer")]
 struct Analyzer {
     analyzer: RefCell<Option<engine::Analyzer>>,
@@ -26,28 +53,7 @@ impl Analyzer {
         let (channels,) = kws.required;
         let (sample_rate, modes, expected_duration) = kws.optional;
 
-        let channels: Vec<engine::Channel> = channels
-            .into_iter()
-            .map(|value| {
-                use engine::Channel::*;
-
-                let ch = Symbol::try_convert(value)?;
-                match ch.name()?.as_ref() {
-                    "left" => Ok(Left),
-                    "right" => Ok(Right),
-                    "center" => Ok(Center),
-                    "left_surround" => Ok(LeftSurround),
-                    "right_surround" => Ok(RightSurround),
-                    "lfe" => Ok(Lfe),
-                    "other" => Ok(Other),
-                    _ => Err(Error::new(
-                        ruby.exception_arg_error(),
-                        format!("unknown channel: {ch}"),
-                    )),
-                }
-            })
-            .collect::<Result<_, Error>>()?;
-
+        let channels = parse_channels_arg(ruby, channels)?;
         let mut builder = engine::AnalyzerBuilder::new().channels(&channels);
 
         if let Some(sample_rate) = sample_rate {
