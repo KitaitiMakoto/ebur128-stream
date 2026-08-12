@@ -20,4 +20,15 @@ class TestReport < Test::Unit::TestCase
     assert_nil @report.short_term_max_lufs
     assert_equal 1.0, @report.programme_duration_seconds
   end
+
+  def test_deconstruct_keys
+    deconstructed = @report.deconstruct_keys(nil)
+
+    assert_instance_of Float, deconstructed[:integrated_lufs]
+    assert_nil deconstructed[:loudness_range_lu]
+    assert_instance_of Float, deconstructed[:true_peak_dbtp]
+    assert_instance_of Float, deconstructed[:momentary_max_lufs]
+    assert_nil deconstructed[:short_term_max_lufs]
+    assert_equal 1.0, deconstructed[:programme_duration_seconds]
+  end
 end
