@@ -33,4 +33,17 @@ class EBUR128StreamTest < Test::Unit::TestCase
       analyzer.push_interleaved [1.0, 1.0, 2.0, 2.0, 3.0, 3.0]
     end
   end
+
+  test "finalize" do
+    analyzer = EBUR128Stream::Analyzer.new(channels: [:left, :right], modes: [:all])
+    analyzer.push_interleaved [1.0, 1.0, 2.0, 2.0, 3.0, 3.0]
+    report = nil
+    assert_nothing_raised do
+      report = analyzer.finalize
+    end
+    assert_instance_of EBUR128Stream::Report, report
+    assert_raise_with_message RuntimeError, /finalized/ do
+      analyzer.finalize
+    end
+  end
 end
