@@ -1,3 +1,4 @@
+mod normalize;
 mod report;
 
 use crate::report::Report;
@@ -10,6 +11,7 @@ use magnus::{
 };
 use std::cell::RefCell;
 
+// can make channels a slice?
 pub(crate) fn parse_channels_arg(
     ruby: &Ruby,
     channels: RArray,
@@ -207,6 +209,7 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     analyzer.define_method("finalize", method!(Analyzer::finalize, 0))?;
 
     report::init(ruby, &ebur128_stream)?;
+    normalize::init(ruby, &ebur128_stream)?;
 
     Ok(())
 }
