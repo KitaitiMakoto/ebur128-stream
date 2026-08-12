@@ -35,4 +35,17 @@ module EBUR128Stream
       :programme_duration_seconds
     ]
   end
+
+  class NormalizeReport
+    include Reportable
+
+    ATTRS = [
+      :measured_integrated_lufs,
+      :measured_true_peak_dbtp,
+      :target_lufs,
+      :true_peak_ceiling_dbtp,
+      :applied_gain_db,
+      :limited_by_true_peak,
+    ]
+  end
 end
