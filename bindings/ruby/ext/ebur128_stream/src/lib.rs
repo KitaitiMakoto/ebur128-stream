@@ -117,6 +117,22 @@ impl Analyzer {
         Ok(())
     }
 
+    fn push_planner() {}
+
+    fn finalize(ruby: &Ruby, rb_self: &Self) -> Result<Report, Error> {
+        let mut analyzer = rb_self
+            .analyzer
+            .try_borrow_mut()
+            .map_err(|_| Error::new(ruby.exception_runtime_error(), "analyzer already in use"))?;
+        let analyzer = analyzer.take().ok_or_else(|| {
+            Error::new(ruby.exception_runtime_error(), "analyzer already finalized")
+        })?;
+        let report = analyzer.finalize();
+
+        Ok(Report { report })
+    }
+}
+
 #[magnus::wrap(class = "EBUR128Stream::Report")]
 struct Report {
     report: RsReport,
@@ -128,6 +144,7 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     let analyzer = ebur128_stream.define_class("Analyzer", ruby.class_object())?;
     analyzer.define_singleton_method("new", function!(Analyzer::new, -1))?;
     analyzer.define_method("push_interleaved", method!(Analyzer::push_interleaved, 1))?;
+    analyzer.define_method("finalize", method!(Analyzer::finalize, 0))?;
     let report = ebur128_stream.define_class("Report", ruby.class_object())?;
 
     Ok(())
