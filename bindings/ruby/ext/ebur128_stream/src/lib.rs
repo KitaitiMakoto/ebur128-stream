@@ -9,7 +9,6 @@ use std::cell::RefCell;
 
 #[magnus::wrap(class = "EBUR128Stream::Analyzer")]
 struct Analyzer {
-    builder: Option<engine::AnalyzerBuilder>,
     analyzer: RefCell<Option<engine::Analyzer>>,
 }
 
@@ -85,7 +84,6 @@ impl Analyzer {
             .map_err(|err| Error::new(ruby.exception_runtime_error(), format!("{}", err)))?;
 
         Ok(Self {
-            builder: None,
             analyzer: RefCell::new(Some(analyzer)),
         })
     }
