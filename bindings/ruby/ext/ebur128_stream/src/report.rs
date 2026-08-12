@@ -1,5 +1,5 @@
 use ebur128_stream_rs as engine;
-use magnus::{Error, RModule, Ruby, prelude::*, method};
+use magnus::{Error, RModule, Ruby, method, prelude::*};
 
 #[magnus::wrap(class = "EBUR128Stream::Report")]
 pub(crate) struct Report {
@@ -38,8 +38,14 @@ pub(crate) fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
     report.define_method("loudness_range_lu", method!(Report::loudness_range_lu, 0))?;
     report.define_method("true_peak_dbtp", method!(Report::true_peak_dbtp, 0))?;
     report.define_method("momentary_max_lufs", method!(Report::momentary_max_lufs, 0))?;
-    report.define_method("short_term_max_lufs", method!(Report::short_term_max_lufs, 0))?;
-    report.define_method("programme_duration_seconds", method!(Report::programme_duration_seconds, 0))?;
+    report.define_method(
+        "short_term_max_lufs",
+        method!(Report::short_term_max_lufs, 0),
+    )?;
+    report.define_method(
+        "programme_duration_seconds",
+        method!(Report::programme_duration_seconds, 0),
+    )?;
 
     Ok(())
 }
