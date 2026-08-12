@@ -171,7 +171,7 @@ impl Analyzer {
             engine::Error::NonFiniteSample => {
                 Error::new(ruby.exception_arg_error(), format!("{err:?}"))
             }
-            _ => unreachable!(),
+            _ => Error::new(ruby.exception_runtime_error(), format!("{err:?}")),
         })?;
 
         Ok(())
