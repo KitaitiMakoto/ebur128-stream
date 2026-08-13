@@ -16,7 +16,7 @@ struct Normalizer {
 }
 
 impl Normalizer {
-    fn new(ruby: &Ruby, args: &[Value]) -> Result<Self, Error> {
+    fn new(args: &[Value]) -> Result<Self, Error> {
         let args = scan_args::<(), (), (), (), _, ()>(args)?;
         let kws = get_kwargs::<_, (u32, RArray), (Option<f64>, Option<f64>), ()>(
             args.keywords,
@@ -26,7 +26,7 @@ impl Normalizer {
         let (sample_rate, channels) = kws.required;
         let (target_lufs, true_peak_ceiling_dbtp) = kws.optional;
 
-        let channels = parse_channels_arg(ruby, channels)?;
+        let channels = parse_channels_arg(channels)?;
 
         Ok(Self {
             sample_rate,
@@ -36,11 +36,7 @@ impl Normalizer {
         })
     }
 
-    fn normalize_in_place(
-        ruby: &Ruby,
-        rb_self: &Self,
-        samples: Value,
-    ) -> Result<NormalizeReport, Error> {
+    fn normalize_in_place(rb_self: &Self, samples: Value) -> Result<NormalizeReport, Error> {
         let mut frames = InterleavedSamples::try_convert(samples)?;
         let mut normalizer =
             engine::normalize::Normalizer::new(rb_self.sample_rate, &rb_self.channels);
@@ -53,7 +49,7 @@ impl Normalizer {
 
         let report = normalizer
             .normalize_in_place(frames.as_mut_slice())
-            .map_err(|err| magnus::Error::new(ruby.exception_runtime_error(), format!("{err}")))?;
+            .map_err(Error::runtime)?;
         frames.write_back_in_place()?;
 
         Ok(NormalizeReport { report })

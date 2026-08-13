@@ -8,17 +8,16 @@ use crate::{error::Error, report::Report, samples::InterleavedSamples};
 use core::time::Duration;
 use ebur128_stream_rs as engine;
 use magnus::{
-    Integer, RArray, Ruby, Symbol, TryConvert, Value, function, method,
+    Integer, RArray, Ruby, Symbol, TryConvert, Value,
+    error::IntoError,
+    function, method,
     prelude::*,
     scan_args::{get_kwargs, scan_args},
 };
 use std::cell::RefCell;
 
 // can make channels a slice?
-pub(crate) fn parse_channels_arg(
-    ruby: &Ruby,
-    channels: RArray,
-) -> Result<Vec<engine::Channel>, Error> {
+pub(crate) fn parse_channels_arg(channels: RArray) -> Result<Vec<engine::Channel>, Error> {
     use engine::Channel::*;
 
     channels
@@ -33,10 +32,7 @@ pub(crate) fn parse_channels_arg(
                 "right_surround" => Ok(RightSurround),
                 "lfe" => Ok(Lfe),
                 "other" => Ok(Other),
-                _ => Err(magnus::Error::new(
-                    ruby.exception_arg_error(),
-                    format!("unknown channel: {ch}"),
-                ))?,
+                _ => Err(Error::argument(format!("unknown channel: {ch}")))?,
             }
         })
         .collect()
@@ -48,7 +44,7 @@ struct Analyzer {
 }
 
 impl Analyzer {
-    fn new(ruby: &Ruby, args: &[Value]) -> Result<Self, Error> {
+    fn new(args: &[Value]) -> Result<Self, Error> {
         let args = scan_args::<(), (), (), (), _, ()>(args)?;
         let kws = get_kwargs::<_, (RArray,), (Option<Integer>, Option<RArray>, Option<Integer>), ()>(
             args.keywords,
@@ -58,7 +54,7 @@ impl Analyzer {
         let (channels,) = kws.required;
         let (sample_rate, modes, expected_duration) = kws.optional;
 
-        let channels = parse_channels_arg(ruby, channels)?;
+        let channels = parse_channels_arg(channels)?;
         let mut builder = engine::AnalyzerBuilder::new().channels(&channels);
 
         if let Some(sample_rate) = sample_rate {
@@ -79,10 +75,7 @@ impl Analyzer {
                     "lra" => Mode::Lra,
                     "all" => Mode::All,
                     _ => {
-                        return Err(magnus::Error::new(
-                            ruby.exception_arg_error(),
-                            format!("unknown mode: {mode}"),
-                        ))?;
+                        return Err(Error::argument(format!("unknown mode: {mode}")))?;
                     }
                 }
             }
@@ -92,25 +85,20 @@ impl Analyzer {
             builder = builder.expected_duration(Duration::from_secs(expected_duration.to_u64()?));
         }
 
-        let analyzer = builder
-            .build()
-            .map_err(|err| magnus::Error::new(ruby.exception_runtime_error(), format!("{err}")))?;
+        let analyzer = builder.build().map_err(Error::runtime)?;
 
         Ok(Self {
             analyzer: RefCell::new(Some(analyzer)),
         })
     }
 
-    fn push_interleaved(ruby: &Ruby, rb_self: &Self, samples: Value) -> Result<(), Error> {
+    fn push_interleaved(rb_self: &Self, samples: Value) -> Result<(), Error> {
         let samples = InterleavedSamples::try_convert(samples)?;
 
-        let mut analyzer = rb_self
-            .analyzer
-            .try_borrow_mut()
-            .map_err(|err| magnus::Error::new(ruby.exception_runtime_error(), format!("{err}")))?;
-        let analyzer = analyzer.as_mut().ok_or_else(|| {
-            magnus::Error::new(ruby.exception_runtime_error(), "analyzer not initialized")
-        })?;
+        let mut analyzer = rb_self.analyzer.try_borrow_mut().map_err(Error::runtime)?;
+        let analyzer = analyzer
+            .as_mut()
+            .ok_or_else(|| Error::runtime("analyzer not initialized"))?;
         analyzer.push_interleaved(samples.as_slice())?;
 
         Ok(())
@@ -122,10 +110,7 @@ impl Analyzer {
                 .into_iter()
                 .map(|channel| {
                     let ch = RArray::from_value(channel).ok_or_else(|| {
-                        magnus::Error::new(
-                            ruby.exception_arg_error(),
-                            format!("channel not Array: {channel}"),
-                        )
+                        Error::argument(format!("channel not Array: {channel}")).into_error(ruby)
                     })?;
                     ch.into_iter()
                         .map(f32::try_convert)
@@ -133,31 +118,32 @@ impl Analyzer {
                 })
                 .collect::<Result<Vec<Vec<f32>>, magnus::Error>>()?
         } else {
-            return Err(magnus::Error::new(
-                ruby.exception_arg_error(),
-                format!("unsupported samples type: {samples}"),
-            ))?;
+            return Err(Error::argument(format!(
+                "unsupported samples type: {samples}"
+            )))?;
         };
         let samples: Vec<&[f32]> = samples.iter().map(|channel| &channel[..]).collect();
 
-        let mut analyzer = rb_self.analyzer.try_borrow_mut().map_err(|_| {
-            magnus::Error::new(ruby.exception_runtime_error(), "analyzer already in use")
-        })?;
-        let analyzer = analyzer.as_mut().ok_or_else(|| {
-            magnus::Error::new(ruby.exception_runtime_error(), "analyzer not initialized")
-        })?;
+        let mut analyzer = rb_self
+            .analyzer
+            .try_borrow_mut()
+            .map_err(|_| Error::runtime("analyzer already in use"))?;
+        let analyzer = analyzer
+            .as_mut()
+            .ok_or_else(|| Error::runtime("analyzer not initialized"))?;
         analyzer.push_planar(&samples)?;
 
         Ok(())
     }
 
-    fn finalize(ruby: &Ruby, rb_self: &Self) -> Result<Report, Error> {
-        let mut analyzer = rb_self.analyzer.try_borrow_mut().map_err(|_| {
-            magnus::Error::new(ruby.exception_runtime_error(), "analyzer already in use")
-        })?;
-        let analyzer = analyzer.take().ok_or_else(|| {
-            magnus::Error::new(ruby.exception_runtime_error(), "analyzer already finalized")
-        })?;
+    fn finalize(rb_self: &Self) -> Result<Report, Error> {
+        let mut analyzer = rb_self
+            .analyzer
+            .try_borrow_mut()
+            .map_err(|_| Error::runtime("analyzer already in use"))?;
+        let analyzer = analyzer
+            .take()
+            .ok_or_else(|| Error::runtime("analyzer already finalized"))?;
         let report = analyzer.finalize();
 
         Ok(Report { report })

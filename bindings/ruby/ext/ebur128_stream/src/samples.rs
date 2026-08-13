@@ -2,7 +2,7 @@ use crate::{
     error::Error,
     memory_view::{Flags, FlagsChainable, MemoryView},
 };
-use magnus::{RArray, Ruby, TryConvert, Value};
+use magnus::{RArray, Ruby, TryConvert, Value, error::IntoError};
 use rb_sys::ruby_memory_view_flags::{
     RUBY_MEMORY_VIEW_ANY_CONTIGUOUS, RUBY_MEMORY_VIEW_SIMPLE, RUBY_MEMORY_VIEW_WRITABLE,
 };
@@ -21,11 +21,8 @@ impl TryConvert for InterleavedSamples {
                 let samples = obj.to_vec::<f32>()?;
                 Self::Array { obj, samples }
             } else {
-                let ruby = Ruby::get_with(val);
-                return Err(magnus::Error::new(
-                    ruby.exception_arg_error(),
-                    format!("unsupported samples type: {val}"),
-                ));
+                return Err(Error::argument(format!("unsupported samples type: {val}"))
+                    .into_error(&Ruby::get_with(val)));
             },
         )
     }

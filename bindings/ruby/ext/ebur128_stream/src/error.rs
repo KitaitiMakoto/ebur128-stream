@@ -4,6 +4,8 @@ use magnus::{Ruby, error::IntoError};
 pub(crate) enum Error {
     Magnus(magnus::Error),
     Engine(engine::Error),
+    Runtime(String),
+    Argument(String),
 }
 
 impl From<magnus::Error> for Error {
@@ -38,6 +40,18 @@ impl IntoError for Error {
                 };
                 magnus::Error::new(err_class, err.to_string())
             }
+            Self::Runtime(msg) => magnus::Error::new(ruby.exception_runtime_error(), msg),
+            Self::Argument(msg) => magnus::Error::new(ruby.exception_arg_error(), msg),
         }
+    }
+}
+
+impl Error {
+    pub(crate) fn runtime<T: ToString>(err: T) -> Self {
+        Self::Runtime(err.to_string())
+    }
+
+    pub(crate) fn argument<T: ToString>(err: T) -> Self {
+        Self::Argument(err.to_string())
     }
 }
