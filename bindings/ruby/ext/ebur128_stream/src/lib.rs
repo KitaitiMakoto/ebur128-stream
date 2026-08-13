@@ -1,13 +1,14 @@
+mod error;
 mod memory_view;
 mod normalize;
 mod report;
 mod samples;
 
-use crate::report::Report;
+use crate::{error::Error, report::Report};
 use core::time::Duration;
 use ebur128_stream_rs as engine;
 use magnus::{
-    Error, Integer, RArray, Ruby, Symbol, TryConvert, Value, function, method,
+    Integer, RArray, Ruby, Symbol, TryConvert, Value, function, method,
     prelude::*,
     scan_args::{get_kwargs, scan_args},
 };
@@ -32,10 +33,10 @@ pub(crate) fn parse_channels_arg(
                 "right_surround" => Ok(RightSurround),
                 "lfe" => Ok(Lfe),
                 "other" => Ok(Other),
-                _ => Err(Error::new(
+                _ => Err(magnus::Error::new(
                     ruby.exception_arg_error(),
                     format!("unknown channel: {ch}"),
-                )),
+                ))?,
             }
         })
         .collect()
@@ -78,10 +79,10 @@ impl Analyzer {
                     "lra" => Mode::Lra,
                     "all" => Mode::All,
                     _ => {
-                        return Err(Error::new(
+                        return Err(magnus::Error::new(
                             ruby.exception_arg_error(),
                             format!("unknown mode: {mode}"),
-                        ));
+                        ))?;
                     }
                 }
             }
@@ -94,7 +95,7 @@ impl Analyzer {
         // TODO: Pend build() and call it just before calling push_xxx()
         let analyzer = builder
             .build()
-            .map_err(|err| Error::new(ruby.exception_runtime_error(), format!("{err}")))?;
+            .map_err(|err| magnus::Error::new(ruby.exception_runtime_error(), format!("{err}")))?;
 
         Ok(Self {
             analyzer: RefCell::new(Some(analyzer)),
@@ -108,33 +109,22 @@ impl Analyzer {
             array
                 .into_iter()
                 .map(TryConvert::try_convert)
-                .collect::<Result<Vec<f32>, Error>>()?
+                .collect::<Result<Vec<f32>, magnus::Error>>()?
         } else {
-            return Err(Error::new(
+            return Err(magnus::Error::new(
                 ruby.exception_arg_error(),
                 format!("unsupported samples type: {samples}"),
-            ));
+            ))?;
         };
 
         let mut analyzer = rb_self
             .analyzer
             .try_borrow_mut()
-            .map_err(|err| Error::new(ruby.exception_runtime_error(), format!("{err}")))?;
+            .map_err(|err| magnus::Error::new(ruby.exception_runtime_error(), format!("{err}")))?;
         let analyzer = analyzer.as_mut().ok_or_else(|| {
-            Error::new(ruby.exception_runtime_error(), "analyzer not initialized")
+            magnus::Error::new(ruby.exception_runtime_error(), "analyzer not initialized")
         })?;
-        analyzer
-            .push_interleaved(&samples)
-            .map_err(|err| match err {
-                engine::Error::InterleavedLengthNotMultiple {
-                    samples: _,
-                    channels: _,
-                } => Error::new(ruby.exception_arg_error(), format!("{err}")),
-                engine::Error::NonFiniteSample => {
-                    Error::new(ruby.exception_arg_error(), format!("{err}"))
-                }
-                _ => unreachable!(),
-            })?;
+        analyzer.push_interleaved(&samples)?;
 
         Ok(())
     }
@@ -145,55 +135,41 @@ impl Analyzer {
                 .into_iter()
                 .map(|channel| {
                     let ch = RArray::from_value(channel).ok_or_else(|| {
-                        Error::new(
+                        magnus::Error::new(
                             ruby.exception_arg_error(),
                             format!("channel not Array: {channel}"),
                         )
                     })?;
                     ch.into_iter()
                         .map(f32::try_convert)
-                        .collect::<Result<Vec<f32>, Error>>()
+                        .collect::<Result<Vec<f32>, magnus::Error>>()
                 })
-                .collect::<Result<Vec<Vec<f32>>, Error>>()?
+                .collect::<Result<Vec<Vec<f32>>, magnus::Error>>()?
         } else {
-            return Err(Error::new(
+            return Err(magnus::Error::new(
                 ruby.exception_arg_error(),
                 format!("unsupported samples type: {samples}"),
-            ));
+            ))?;
         };
         let samples: Vec<&[f32]> = samples.iter().map(|channel| &channel[..]).collect();
 
-        let mut analyzer = rb_self
-            .analyzer
-            .try_borrow_mut()
-            .map_err(|_| Error::new(ruby.exception_runtime_error(), "analyzer already in use"))?;
+        let mut analyzer = rb_self.analyzer.try_borrow_mut().map_err(|_| {
+            magnus::Error::new(ruby.exception_runtime_error(), "analyzer already in use")
+        })?;
         let analyzer = analyzer.as_mut().ok_or_else(|| {
-            Error::new(ruby.exception_runtime_error(), "analyzer not initialized")
+            magnus::Error::new(ruby.exception_runtime_error(), "analyzer not initialized")
         })?;
-        analyzer.push_planar(&samples).map_err(|err| match err {
-            engine::Error::ChannelMismatch {
-                expected: _,
-                got: _,
-            } => Error::new(ruby.exception_arg_error(), format!("{err}")),
-            engine::Error::PlanarLengthMismatch { first: _, got: _ } => {
-                Error::new(ruby.exception_arg_error(), format!("{err}"))
-            }
-            engine::Error::NonFiniteSample => {
-                Error::new(ruby.exception_arg_error(), format!("{err}"))
-            }
-            _ => Error::new(ruby.exception_runtime_error(), format!("{err}")),
-        })?;
+        analyzer.push_planar(&samples)?;
 
         Ok(())
     }
 
     fn finalize(ruby: &Ruby, rb_self: &Self) -> Result<Report, Error> {
-        let mut analyzer = rb_self
-            .analyzer
-            .try_borrow_mut()
-            .map_err(|_| Error::new(ruby.exception_runtime_error(), "analyzer already in use"))?;
+        let mut analyzer = rb_self.analyzer.try_borrow_mut().map_err(|_| {
+            magnus::Error::new(ruby.exception_runtime_error(), "analyzer already in use")
+        })?;
         let analyzer = analyzer.take().ok_or_else(|| {
-            Error::new(ruby.exception_runtime_error(), "analyzer already finalized")
+            magnus::Error::new(ruby.exception_runtime_error(), "analyzer already finalized")
         })?;
         let report = analyzer.finalize();
 

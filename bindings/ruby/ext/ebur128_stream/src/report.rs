@@ -1,5 +1,6 @@
+use crate::error::Error;
 use ebur128_stream_rs as engine;
-use magnus::{Error, RModule, Ruby, method, prelude::*};
+use magnus::{RModule, Ruby, method, prelude::*};
 
 #[magnus::wrap(class = "EBUR128Stream::Report")]
 pub(crate) struct Report {

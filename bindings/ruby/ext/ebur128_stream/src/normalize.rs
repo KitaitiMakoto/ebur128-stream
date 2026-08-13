@@ -1,7 +1,7 @@
-use crate::{parse_channels_arg, samples::InterleavedSamples};
+use crate::{error::Error, parse_channels_arg, samples::InterleavedSamples};
 use ebur128_stream_rs as engine;
 use magnus::{
-    Error, RArray, RModule, Ruby, TryConvert, Value, function, method,
+    RArray, RModule, Ruby, TryConvert, Value, function, method,
     prelude::*,
     scan_args::{get_kwargs, scan_args},
 };
@@ -53,7 +53,7 @@ impl Normalizer {
 
         let report = normalizer
             .normalize_in_place(frames.as_mut_slice())
-            .map_err(|err| Error::new(ruby.exception_runtime_error(), format!("{err}")))?;
+            .map_err(|err| magnus::Error::new(ruby.exception_runtime_error(), format!("{err}")))?;
         frames.write_back_in_place()?;
 
         Ok(NormalizeReport { report })

@@ -1,5 +1,5 @@
-use crate::memory_view::MemoryView;
-use magnus::{Error, RArray, Ruby, TryConvert, Value};
+use crate::{error::Error, memory_view::MemoryView};
+use magnus::{RArray, Ruby, TryConvert, Value};
 use rb_sys::ruby_memory_view_flags::{
     RUBY_MEMORY_VIEW_ANY_CONTIGUOUS, RUBY_MEMORY_VIEW_SIMPLE, RUBY_MEMORY_VIEW_WRITABLE,
 };
@@ -10,7 +10,7 @@ pub(crate) enum InterleavedSamples {
 }
 
 impl TryConvert for InterleavedSamples {
-    fn try_convert(val: Value) -> Result<Self, Error> {
+    fn try_convert(val: Value) -> Result<Self, magnus::Error> {
         let memory_view = Self::try_consume_memory_view(val);
         let samples = if let Some(memory_view) = memory_view {
             memory_view
@@ -18,11 +18,11 @@ impl TryConvert for InterleavedSamples {
             let samples = obj
                 .into_iter()
                 .map(TryConvert::try_convert)
-                .collect::<Result<Vec<f32>, Error>>()?;
+                .collect::<Result<Vec<f32>, magnus::Error>>()?;
             Self::Array { obj, samples }
         } else {
             let ruby = Ruby::get_with(val);
-            return Err(Error::new(
+            return Err(magnus::Error::new(
                 ruby.exception_arg_error(),
                 format!("unsupported samples type: {val}"),
             ));
