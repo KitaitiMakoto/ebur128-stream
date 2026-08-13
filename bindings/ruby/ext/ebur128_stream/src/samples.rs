@@ -56,19 +56,19 @@ impl InterleavedSamples {
     }
 
     fn consume_memory_view(val: Value) -> Option<Self> {
-        let view = MemoryView::get(val, Flags::simple());
-        if let Ok(view) = view {
-            if !view.is_readonly() && view.format().is_some() && view.format().unwrap() == "f" {
-                // TODO: Check format more strictly(size, other expression)
-                return Some(Self::MemoryView { view });
-            }
-        }
         let view = MemoryView::get(val, Flags::writable().any_contiguous());
         if let Ok(view) = view {
             if let Some(format) = view.format() {
+                // TODO: Check format more strictly(size, other expression)
                 if format == "f" {
                     return Some(Self::MemoryView { view });
                 }
+            }
+        }
+        let view = MemoryView::get(val, Flags::simple());
+        if let Ok(view) = view {
+            if !view.is_readonly() && view.format().is_some() && view.format().unwrap() == "f" {
+                return Some(Self::MemoryView { view });
             }
         }
         None
