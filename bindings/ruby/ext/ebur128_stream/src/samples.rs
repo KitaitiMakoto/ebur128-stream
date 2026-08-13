@@ -15,7 +15,7 @@ pub(crate) enum InterleavedSamples {
 impl TryConvert for InterleavedSamples {
     fn try_convert(val: Value) -> Result<Self, magnus::Error> {
         Ok(
-            if let Some(memory_view) = Self::try_consume_memory_view(val) {
+            if let Some(memory_view) = Self::consume_memory_view(val) {
                 memory_view
             } else if let Some(obj) = RArray::from_value(val) {
                 let samples = obj.to_vec::<f32>()?;
@@ -55,7 +55,7 @@ impl InterleavedSamples {
         Ok(())
     }
 
-    fn try_consume_memory_view(val: Value) -> Option<Self> {
+    fn consume_memory_view(val: Value) -> Option<Self> {
         let view = MemoryView::get(val, Flags::simple());
         if let Ok(view) = view {
             if !view.is_readonly() && view.format().is_some() && view.format().unwrap() == "f" {
