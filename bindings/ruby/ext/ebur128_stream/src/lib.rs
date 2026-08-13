@@ -4,7 +4,7 @@ mod normalize;
 mod report;
 mod samples;
 
-use crate::{error::Error, report::Report};
+use crate::{error::Error, report::Report, samples::InterleavedSamples};
 use core::time::Duration;
 use ebur128_stream_rs as engine;
 use magnus::{
@@ -103,19 +103,7 @@ impl Analyzer {
     }
 
     fn push_interleaved(ruby: &Ruby, rb_self: &Self, samples: Value) -> Result<(), Error> {
-        // TODO: Accept MemoryView producer
-        // TODO: Consider chunking instead of converting whole samples at once
-        let samples = if let Some(array) = RArray::from_value(samples) {
-            array
-                .into_iter()
-                .map(TryConvert::try_convert)
-                .collect::<Result<Vec<f32>, magnus::Error>>()?
-        } else {
-            return Err(magnus::Error::new(
-                ruby.exception_arg_error(),
-                format!("unsupported samples type: {samples}"),
-            ))?;
-        };
+        let samples = InterleavedSamples::try_convert(samples)?;
 
         let mut analyzer = rb_self
             .analyzer
@@ -124,7 +112,7 @@ impl Analyzer {
         let analyzer = analyzer.as_mut().ok_or_else(|| {
             magnus::Error::new(ruby.exception_runtime_error(), "analyzer not initialized")
         })?;
-        analyzer.push_interleaved(&samples)?;
+        analyzer.push_interleaved(samples.as_slice())?;
 
         Ok(())
     }

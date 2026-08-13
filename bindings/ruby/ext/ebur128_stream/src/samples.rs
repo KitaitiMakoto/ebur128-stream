@@ -33,6 +33,13 @@ impl TryConvert for InterleavedSamples {
 }
 
 impl InterleavedSamples {
+    pub(crate) fn as_slice(&self) -> &[f32] {
+        match self {
+            Self::Array { obj: _, samples } => samples,
+            Self::MemoryView { view } => view.data().unwrap_or(&[]),
+        }
+    }
+
     pub(crate) fn as_mut_slice(&mut self) -> &mut [f32] {
         match self {
             Self::Array { obj: _, samples } => samples,

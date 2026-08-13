@@ -57,6 +57,25 @@ impl MemoryView {
         }
     }
 
+    pub fn data<T>(&self) -> Result<&[T], Error> {
+        let n_items = self.byte_size()? / size_of::<T>();
+        let data = self.inner.data;
+        if data.is_null() {
+            let ruby = Ruby::get_with(self.obj());
+            return Err(Error::new(ruby.exception_runtime_error(), "data is NULL"));
+        }
+        let ptr = data.cast::<T>();
+        if !ptr.is_aligned() {
+            let ruby = Ruby::get_with(self.obj());
+            return Err(Error::new(
+                ruby.exception_runtime_error(),
+                "data not aligned",
+            ));
+        }
+
+        Ok(unsafe { slice::from_raw_parts(ptr, n_items) })
+    }
+
     pub fn data_as_mut<T>(&mut self) -> Result<&mut [T], Error> {
         if self.is_readonly() {
             let ruby = Ruby::get_with(self.obj());
