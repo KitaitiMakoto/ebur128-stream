@@ -14,17 +14,17 @@ pub(crate) enum InterleavedSamples {
 
 impl TryConvert for InterleavedSamples {
     fn try_convert(val: Value) -> Result<Self, magnus::Error> {
-        Ok(
-            if let Some(memory_view) = Self::consume_memory_view(val) {
-                memory_view
-            } else if let Some(obj) = RArray::from_value(val) {
-                let samples = obj.to_vec::<f32>()?;
-                Self::Array { obj, samples }
-            } else {
-                return Err(Error::argument(format!("unsupported samples type: {val}"))
-                    .into_error(&Ruby::get_with(val)));
-            },
-        )
+        if let Some(memory_view) = Self::consume_memory_view(val) {
+            Ok(memory_view)
+        } else if let Some(obj) = RArray::from_value(val) {
+            Ok(Self::Array {
+                obj,
+                samples: obj.to_vec()?,
+            })
+        } else {
+            Err(Error::argument(format!("unsupported samples type: {val}"))
+                .into_error(&Ruby::get_with(val)))
+        }
     }
 }
 
