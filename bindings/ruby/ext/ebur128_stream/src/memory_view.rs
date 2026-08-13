@@ -1,6 +1,112 @@
 use magnus::{Error, Ruby, Value};
-use rb_sys::{VALUE, rb_memory_view_get, rb_memory_view_release, rb_memory_view_t};
+use rb_sys::{
+    VALUE, rb_memory_view_get, rb_memory_view_release, rb_memory_view_t,
+    ruby_memory_view_flags::{
+        RUBY_MEMORY_VIEW_ANY_CONTIGUOUS, RUBY_MEMORY_VIEW_COLUMN_MAJOR, RUBY_MEMORY_VIEW_FORMAT,
+        RUBY_MEMORY_VIEW_INDIRECT, RUBY_MEMORY_VIEW_MULTI_DIMENSIONAL, RUBY_MEMORY_VIEW_ROW_MAJOR,
+        RUBY_MEMORY_VIEW_SIMPLE, RUBY_MEMORY_VIEW_STRIDES, RUBY_MEMORY_VIEW_WRITABLE,
+    },
+};
 use std::{ffi::CStr, mem::MaybeUninit, slice};
+
+pub struct Flags(i32);
+
+impl From<Flags> for i32 {
+    fn from(value: Flags) -> Self {
+        value.0
+    }
+}
+
+impl Flags {
+    pub fn simple() -> Self {
+        Self(RUBY_MEMORY_VIEW_SIMPLE as i32)
+    }
+
+    pub fn writable() -> Self {
+        Self(RUBY_MEMORY_VIEW_WRITABLE as i32)
+    }
+
+    pub fn format() -> Self {
+        Self(RUBY_MEMORY_VIEW_FORMAT as i32)
+    }
+
+    pub fn multi_dimensional() -> Self {
+        Self(RUBY_MEMORY_VIEW_MULTI_DIMENSIONAL as i32)
+    }
+
+    pub fn strides() -> Self {
+        Self(RUBY_MEMORY_VIEW_STRIDES as i32)
+    }
+
+    pub fn row_major() -> Self {
+        Self(RUBY_MEMORY_VIEW_ROW_MAJOR as i32)
+    }
+
+    pub fn column_major() -> Self {
+        Self(RUBY_MEMORY_VIEW_COLUMN_MAJOR as i32)
+    }
+
+    pub fn any_contiguous() -> Self {
+        Self(RUBY_MEMORY_VIEW_ANY_CONTIGUOUS as i32)
+    }
+
+    pub fn indirect() -> Self {
+        Self(RUBY_MEMORY_VIEW_INDIRECT as i32)
+    }
+}
+
+pub trait FlagsChainable {
+    fn writable(self) -> Self;
+    fn format(self) -> Self;
+    fn multi_dimensional(self) -> Self;
+    fn strides(self) -> Self;
+    fn row_major(self) -> Self;
+    fn column_major(self) -> Self;
+    fn any_contiguous(self) -> Self;
+    fn indirect(self) -> Self;
+}
+
+impl FlagsChainable for Flags {
+    fn writable(mut self) -> Self {
+        self.0 |= RUBY_MEMORY_VIEW_WRITABLE as i32;
+        self
+    }
+
+    fn format(mut self) -> Self {
+        self.0 |= RUBY_MEMORY_VIEW_FORMAT as i32;
+        self
+    }
+
+    fn multi_dimensional(mut self) -> Self {
+        self.0 |= RUBY_MEMORY_VIEW_MULTI_DIMENSIONAL as i32;
+        self
+    }
+
+    fn strides(mut self) -> Self {
+        self.0 |= RUBY_MEMORY_VIEW_STRIDES as i32;
+        self
+    }
+
+    fn row_major(mut self) -> Self {
+        self.0 |= RUBY_MEMORY_VIEW_ROW_MAJOR as i32;
+        self
+    }
+
+    fn column_major(mut self) -> Self {
+        self.0 |= RUBY_MEMORY_VIEW_COLUMN_MAJOR as i32;
+        self
+    }
+
+    fn any_contiguous(mut self) -> Self {
+        self.0 |= RUBY_MEMORY_VIEW_ANY_CONTIGUOUS as i32;
+        self
+    }
+
+    fn indirect(mut self) -> Self {
+        self.0 |= RUBY_MEMORY_VIEW_INDIRECT as i32;
+        self
+    }
+}
 
 pub struct MemoryView {
     inner: rb_memory_view_t,
@@ -16,12 +122,12 @@ impl Drop for MemoryView {
 }
 
 impl MemoryView {
-    pub fn get(obj: Value, flags: i32) -> Result<Self, Error> {
+    pub fn get(obj: Value, flags: Flags) -> Result<Self, Error> {
         let ruby = Ruby::get_with(obj);
 
         let obj = unsafe { std::mem::transmute::<Value, VALUE>(obj) };
         let mut view = MaybeUninit::uninit();
-        let result = unsafe { rb_memory_view_get(obj, view.as_mut_ptr(), flags) };
+        let result = unsafe { rb_memory_view_get(obj, view.as_mut_ptr(), flags.into()) };
         if !result {
             return Err(Error::new(
                 ruby.exception_runtime_error(),

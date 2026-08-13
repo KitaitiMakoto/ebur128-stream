@@ -1,4 +1,7 @@
-use crate::{error::Error, memory_view::MemoryView};
+use crate::{
+    error::Error,
+    memory_view::{Flags, FlagsChainable, MemoryView},
+};
 use magnus::{RArray, Ruby, TryConvert, Value};
 use rb_sys::ruby_memory_view_flags::{
     RUBY_MEMORY_VIEW_ANY_CONTIGUOUS, RUBY_MEMORY_VIEW_SIMPLE, RUBY_MEMORY_VIEW_WRITABLE,
@@ -56,17 +59,14 @@ impl InterleavedSamples {
     }
 
     fn try_consume_memory_view(val: Value) -> Option<Self> {
-        let view = MemoryView::get(val, RUBY_MEMORY_VIEW_SIMPLE as i32);
+        let view = MemoryView::get(val, Flags::simple());
         if let Ok(view) = view {
             if !view.is_readonly() && view.format().is_some() && view.format().unwrap() == "f" {
                 // TODO: Check format more strictly(size, other expression)
                 return Some(Self::MemoryView { view });
             }
         }
-        let view = MemoryView::get(
-            val,
-            RUBY_MEMORY_VIEW_WRITABLE as i32 | RUBY_MEMORY_VIEW_ANY_CONTIGUOUS as i32,
-        );
+        let view = MemoryView::get(val, Flags::writable().any_contiguous());
         if let Ok(view) = view {
             if let Some(format) = view.format() {
                 if format == "f" {
