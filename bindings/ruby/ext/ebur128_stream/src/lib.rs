@@ -92,7 +92,6 @@ impl Analyzer {
             builder = builder.expected_duration(Duration::from_secs(expected_duration.to_u64()?));
         }
 
-        // TODO: Pend build() and call it just before calling push_xxx()
         let analyzer = builder
             .build()
             .map_err(|err| magnus::Error::new(ruby.exception_runtime_error(), format!("{err}")))?;
