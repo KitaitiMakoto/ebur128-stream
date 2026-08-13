@@ -15,10 +15,7 @@ impl TryConvert for InterleavedSamples {
         let samples = if let Some(memory_view) = memory_view {
             memory_view
         } else if let Some(obj) = RArray::from_value(val) {
-            let samples = obj
-                .into_iter()
-                .map(TryConvert::try_convert)
-                .collect::<Result<Vec<f32>, magnus::Error>>()?;
+            let samples = obj.to_vec::<f32>()?;
             Self::Array { obj, samples }
         } else {
             let ruby = Ruby::get_with(val);
