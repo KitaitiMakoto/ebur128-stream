@@ -11,21 +11,20 @@ pub(crate) enum InterleavedSamples {
 
 impl TryConvert for InterleavedSamples {
     fn try_convert(val: Value) -> Result<Self, magnus::Error> {
-        let memory_view = Self::try_consume_memory_view(val);
-        let samples = if let Some(memory_view) = memory_view {
-            memory_view
-        } else if let Some(obj) = RArray::from_value(val) {
-            let samples = obj.to_vec::<f32>()?;
-            Self::Array { obj, samples }
-        } else {
-            let ruby = Ruby::get_with(val);
-            return Err(magnus::Error::new(
-                ruby.exception_arg_error(),
-                format!("unsupported samples type: {val}"),
-            ));
-        };
-
-        Ok(samples)
+        Ok(
+            if let Some(memory_view) = Self::try_consume_memory_view(val) {
+                memory_view
+            } else if let Some(obj) = RArray::from_value(val) {
+                let samples = obj.to_vec::<f32>()?;
+                Self::Array { obj, samples }
+            } else {
+                let ruby = Ruby::get_with(val);
+                return Err(magnus::Error::new(
+                    ruby.exception_arg_error(),
+                    format!("unsupported samples type: {val}"),
+                ));
+            },
+        )
     }
 }
 
