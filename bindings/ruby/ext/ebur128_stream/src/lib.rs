@@ -4,13 +4,15 @@ mod normalize;
 mod report;
 mod samples;
 
-use crate::{error::Error, report::Report, samples::InterleavedSamples};
+use crate::{
+    error::Error,
+    report::Report,
+    samples::{InterleavedSamples, PlanarSamples},
+};
 use core::time::Duration;
 use ebur128_stream_rs as engine;
 use magnus::{
-    Integer, RArray, Ruby, Symbol, TryConvert, Value,
-    error::IntoError,
-    function, method,
+    Integer, RArray, Ruby, Symbol, TryConvert, Value, function, method,
     prelude::*,
     scan_args::{get_kwargs, scan_args},
 };
@@ -104,26 +106,8 @@ impl Analyzer {
         Ok(())
     }
 
-    fn push_planar(ruby: &Ruby, rb_self: &Self, samples: Value) -> Result<(), Error> {
-        let samples: Vec<Vec<f32>> = if let Some(channels) = RArray::from_value(samples) {
-            channels
-                .into_iter()
-                .map(|channel| {
-                    let ch = RArray::from_value(channel).ok_or_else(|| {
-                        Error::argument(format!("channel not Array: {channel}")).into_error(ruby)
-                    })?;
-                    ch.into_iter()
-                        .map(f32::try_convert)
-                        .collect::<Result<Vec<f32>, magnus::Error>>()
-                })
-                .collect::<Result<Vec<Vec<f32>>, magnus::Error>>()?
-        } else {
-            return Err(Error::argument(format!(
-                "unsupported samples type: {samples}"
-            )))?;
-        };
-        let samples: Vec<&[f32]> = samples.iter().map(|channel| &channel[..]).collect();
-
+    fn push_planar(rb_self: &Self, samples: Value) -> Result<(), Error> {
+        let samples = PlanarSamples::try_convert(samples)?;
         let mut analyzer = rb_self
             .analyzer
             .try_borrow_mut()
@@ -131,7 +115,7 @@ impl Analyzer {
         let analyzer = analyzer
             .as_mut()
             .ok_or_else(|| Error::runtime("analyzer not initialized"))?;
-        analyzer.push_planar(&samples)?;
+        analyzer.push_planar(&samples.channel_slices())?;
 
         Ok(())
     }

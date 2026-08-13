@@ -74,3 +74,55 @@ impl InterleavedSamples {
         None
     }
 }
+
+pub(crate) enum PlanarSamples {
+    Array { samples: Vec<Vec<f32>> },
+    MemoryView { view: MemoryView },
+}
+
+impl TryConvert for PlanarSamples {
+    fn try_convert(val: Value) -> Result<Self, magnus::Error> {
+        if let Some(memory_view) = Self::consume_memory_view(val) {
+            Ok(memory_view)
+        } else if let Some(obj) = RArray::from_value(val) {
+            Ok(Self::Array {
+                samples: obj.to_vec()?,
+            })
+        } else {
+            Err(Error::argument(format!("unsupported samples type: {val}"))
+                .into_error(&Ruby::get_with(val)))
+        }
+    }
+}
+
+impl PlanarSamples {
+    pub fn channel_slices(&self) -> Vec<&[f32]> {
+        match self {
+            Self::Array { samples } => samples.iter().map(Vec::as_slice).collect(),
+            Self::MemoryView { view } => view.data().unwrap_or(&[]).to_vec(),
+        }
+    }
+
+    fn consume_memory_view(val: Value) -> Option<Self> {
+        let view = MemoryView::get(val, Flags::writable().format().row_major());
+        if let Ok(view) = view {
+            if view.ndim() == 2
+                && let Some(format) = view.format()
+                && format == "f"
+            {
+                return Some(Self::MemoryView { view });
+            }
+        }
+        let view = MemoryView::get(val, Flags::simple());
+        if let Ok(view) = view {
+            if !view.is_readonly()
+                && view.ndim() == 2
+                && view.format().is_some()
+                && view.format().unwrap() == "f"
+            {
+                return Some(Self::MemoryView { view });
+            }
+        }
+        None
+    }
+}

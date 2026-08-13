@@ -143,6 +143,10 @@ impl MemoryView {
         unsafe { std::mem::transmute::<VALUE, Value>(self.inner.obj) }
     }
 
+    pub fn ndim(&self) -> i64 {
+        self.inner.ndim
+    }
+
     pub fn byte_size(&self) -> Result<usize, Error> {
         usize::try_from(self.inner.byte_size).map_err(|err| {
             let obj = self.obj();
