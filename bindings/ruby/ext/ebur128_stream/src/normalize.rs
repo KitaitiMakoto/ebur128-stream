@@ -38,6 +38,9 @@ impl Normalizer {
 
     fn normalize_in_place(rb_self: &Self, samples: Value) -> Result<NormalizeReport, Error> {
         let mut frames = InterleavedSamples::try_convert(samples)?;
+        if !frames.is_writable() {
+            return Err(Error::argument("samples not writable"));
+        }
         let mut normalizer =
             engine::normalize::Normalizer::new(rb_self.sample_rate, &rb_self.channels);
         if let Some(target_lufs) = rb_self.target_lufs {

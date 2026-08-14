@@ -8,7 +8,7 @@ use rb_sys::{
         RUBY_MEMORY_VIEW_SIMPLE, RUBY_MEMORY_VIEW_STRIDES, RUBY_MEMORY_VIEW_WRITABLE,
     },
 };
-use std::{ffi::CStr, mem::MaybeUninit, ptr, slice, marker::PhantomData};
+use std::{ffi::CStr, marker::PhantomData, mem::MaybeUninit, ptr, slice};
 
 pub struct Flags(i32);
 
@@ -141,8 +141,12 @@ impl<T> MemoryView<T> {
                 "MemoryView not got",
             ));
         }
+
         let view = unsafe { view.assume_init() };
-        let view = Self { inner: view, marker: PhantomData };
+        let view = Self {
+            inner: view,
+            marker: PhantomData,
+        };
 
         // Validation
         let ndim = usize::try_from(view.inner.ndim)

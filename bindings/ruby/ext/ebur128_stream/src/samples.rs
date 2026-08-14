@@ -26,6 +26,15 @@ impl TryConvert for InterleavedSamples {
 }
 
 impl InterleavedSamples {
+    // Instead of this method, should add Writable/ReadableInterleavedSamples,
+    // or try_concert_mut()?
+    pub(crate) fn is_writable(&self) -> bool {
+        match self {
+            Self::Array { .. } => true,
+            Self::MemoryView { view } => !view.is_readonly(),
+        }
+    }
+
     pub(crate) fn as_slice(&self) -> &[f32] {
         match self {
             Self::Array { obj: _, samples } => samples,
@@ -64,13 +73,19 @@ impl InterleavedSamples {
                 }
             }
         }
+        let view = MemoryView::<f32>::get(val, Flags::format().any_contiguous());
+        if let Ok(view) = view {
+            if view.ndim() == 1
+                && let Some(format) = view.format()
+                && format == "f"
+            {
+                return Some(Self::MemoryView { view });
+            }
+        }
         let view = MemoryView::<f32>::get(val, Flags::simple());
         if let Ok(view) = view {
-            if !view.is_readonly()
-                && view.ndim() == 1
-                && view.format().is_some()
-                && view.format().unwrap() == "f"
-            {
+            let format = view.format();
+            if view.ndim() == 1 && format.is_some() && format.unwrap() == "f" {
                 return Some(Self::MemoryView { view });
             }
         }
