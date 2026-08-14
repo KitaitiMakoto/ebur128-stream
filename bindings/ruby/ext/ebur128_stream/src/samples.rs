@@ -3,13 +3,10 @@ use crate::{
     memory_view::{Flags, FlagsChainable, MemoryView},
 };
 use magnus::{RArray, Ruby, TryConvert, Value, error::IntoError};
-use rb_sys::ruby_memory_view_flags::{
-    RUBY_MEMORY_VIEW_ANY_CONTIGUOUS, RUBY_MEMORY_VIEW_SIMPLE, RUBY_MEMORY_VIEW_WRITABLE,
-};
 
 pub(crate) enum InterleavedSamples {
     Array { obj: RArray, samples: Vec<f32> },
-    MemoryView { view: MemoryView },
+    MemoryView { view: MemoryView<f32> },
 }
 
 impl TryConvert for InterleavedSamples {
@@ -32,14 +29,14 @@ impl InterleavedSamples {
     pub(crate) fn as_slice(&self) -> &[f32] {
         match self {
             Self::Array { obj: _, samples } => samples,
-            Self::MemoryView { view } => view.data().unwrap_or(&[]),
+            Self::MemoryView { view } => view.data(),
         }
     }
 
     pub(crate) fn as_mut_slice(&mut self) -> &mut [f32] {
         match self {
             Self::Array { obj: _, samples } => samples,
-            Self::MemoryView { view } => view.data_as_mut().unwrap_or(&mut []),
+            Self::MemoryView { view } => view.data_as_mut(),
         }
     }
 
@@ -56,18 +53,24 @@ impl InterleavedSamples {
     }
 
     fn consume_memory_view(val: Value) -> Option<Self> {
-        let view = MemoryView::get(val, Flags::writable().any_contiguous());
+        let view = MemoryView::<f32>::get(val, Flags::writable().format().any_contiguous());
         if let Ok(view) = view {
-            if let Some(format) = view.format() {
+            if view.ndim() == 1
+                && let Some(format) = view.format()
+            {
                 // TODO: Check format more strictly(size, other expression)
                 if format == "f" {
                     return Some(Self::MemoryView { view });
                 }
             }
         }
-        let view = MemoryView::get(val, Flags::simple());
+        let view = MemoryView::<f32>::get(val, Flags::simple());
         if let Ok(view) = view {
-            if !view.is_readonly() && view.format().is_some() && view.format().unwrap() == "f" {
+            if !view.is_readonly()
+                && view.ndim() == 1
+                && view.format().is_some()
+                && view.format().unwrap() == "f"
+            {
                 return Some(Self::MemoryView { view });
             }
         }
@@ -77,7 +80,7 @@ impl InterleavedSamples {
 
 pub(crate) enum PlanarSamples {
     Array { samples: Vec<Vec<f32>> },
-    MemoryView { view: MemoryView },
+    MemoryView { view: MemoryView<f32> },
 }
 
 impl TryConvert for PlanarSamples {
@@ -99,12 +102,21 @@ impl PlanarSamples {
     pub fn channel_slices(&self) -> Vec<&[f32]> {
         match self {
             Self::Array { samples } => samples.iter().map(Vec::as_slice).collect(),
-            Self::MemoryView { view } => view.data().unwrap_or(&[]).to_vec(),
+            Self::MemoryView { view } => {
+                let shape = view.shape().expect("ndim > 1 is checked when calling ");
+                let n_channels = shape[0];
+                let channel_len = shape[1];
+                if channel_len == 0 {
+                    (0..n_channels).map(|_| &view.data()[..0]).collect()
+                } else {
+                    view.data().chunks_exact(channel_len).collect()
+                }
+            }
         }
     }
 
     fn consume_memory_view(val: Value) -> Option<Self> {
-        let view = MemoryView::get(val, Flags::writable().format().row_major());
+        let view = MemoryView::<f32>::get(val, Flags::writable().format().row_major());
         if let Ok(view) = view {
             if view.ndim() == 2
                 && let Some(format) = view.format()
@@ -113,7 +125,7 @@ impl PlanarSamples {
                 return Some(Self::MemoryView { view });
             }
         }
-        let view = MemoryView::get(val, Flags::simple());
+        let view = MemoryView::<f32>::get(val, Flags::simple());
         if let Ok(view) = view {
             if !view.is_readonly()
                 && view.ndim() == 2

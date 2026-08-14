@@ -1,13 +1,14 @@
 use magnus::{Error, Ruby, Value};
 use rb_sys::{
-    VALUE, rb_memory_view_get, rb_memory_view_release, rb_memory_view_t,
+    Qnil, VALUE, rb_memory_view_get, rb_memory_view_parse_item_format, rb_memory_view_release,
+    rb_memory_view_t,
     ruby_memory_view_flags::{
         RUBY_MEMORY_VIEW_ANY_CONTIGUOUS, RUBY_MEMORY_VIEW_COLUMN_MAJOR, RUBY_MEMORY_VIEW_FORMAT,
         RUBY_MEMORY_VIEW_INDIRECT, RUBY_MEMORY_VIEW_MULTI_DIMENSIONAL, RUBY_MEMORY_VIEW_ROW_MAJOR,
         RUBY_MEMORY_VIEW_SIMPLE, RUBY_MEMORY_VIEW_STRIDES, RUBY_MEMORY_VIEW_WRITABLE,
     },
 };
-use std::{ffi::CStr, mem::MaybeUninit, slice};
+use std::{ffi::CStr, mem::MaybeUninit, ptr, slice, marker::PhantomData};
 
 pub struct Flags(i32);
 
@@ -108,11 +109,12 @@ impl FlagsChainable for Flags {
     }
 }
 
-pub struct MemoryView {
+pub struct MemoryView<T> {
     inner: rb_memory_view_t,
+    marker: PhantomData<T>,
 }
 
-impl Drop for MemoryView {
+impl<T> Drop for MemoryView<T> {
     fn drop(&mut self) {
         // SAFETY: This guard is generated from successfully allocated rb_memory_view_t and drop() is called only once so it's not released more than once
         unsafe {
@@ -121,13 +123,18 @@ impl Drop for MemoryView {
     }
 }
 
-impl MemoryView {
+impl<T> MemoryView<T> {
     pub fn get(obj: Value, flags: Flags) -> Result<Self, Error> {
         let ruby = Ruby::get_with(obj);
 
         let obj = unsafe { std::mem::transmute::<Value, VALUE>(obj) };
         let mut view = MaybeUninit::uninit();
-        let result = unsafe { rb_memory_view_get(obj, view.as_mut_ptr(), flags.into()) };
+
+        let mut result = false;
+        magnus::rb_sys::protect(|| {
+            result = unsafe { rb_memory_view_get(obj, view.as_mut_ptr(), flags.into()) };
+            Qnil.into()
+        })?;
         if !result {
             return Err(Error::new(
                 ruby.exception_runtime_error(),
@@ -135,24 +142,83 @@ impl MemoryView {
             ));
         }
         let view = unsafe { view.assume_init() };
+        let view = Self { inner: view, marker: PhantomData };
 
-        Ok(Self { inner: view })
+        // Validation
+        let ndim = usize::try_from(view.inner.ndim)
+            .map_err(|_| Error::new(ruby.exception_arg_error(), "invalid ndim"))?;
+        usize::try_from(view.inner.byte_size)
+            .map_err(|_| Error::new(ruby.exception_arg_error(), "invalid byte_size"))?;
+        let item_size = usize::try_from(view.inner.item_size)
+            .map_err(|_| Error::new(ruby.exception_arg_error(), "invalid item_size"))?;
+
+        let format = view.inner.format;
+        if !format.is_null() {
+            let format = unsafe { CStr::from_ptr(format) };
+            let item_size_by_format = Self::validate_format(&ruby, format)?;
+            if item_size_by_format != item_size {
+                Err(Error::new(
+                    ruby.exception_arg_error(),
+                    "item_size and item size calculated by format not match",
+                ))?;
+            }
+        }
+
+        if view.inner.shape.is_null() {
+            if ndim > 1 {
+                Err(Error::new(
+                    ruby.exception_arg_error(),
+                    "ndim > 1 but shape is NULL",
+                ))?;
+            }
+        } else {
+            // SAFETY: rb_memory_view_t.shape is *ssize_t
+            let shape = unsafe { slice::from_raw_parts(view.inner.shape, ndim) };
+            if !view.inner.shape.cast::<usize>().is_aligned() {
+                Err(Error::new(
+                    ruby.exception_arg_error(),
+                    "shape not aligned for usize",
+                ))?;
+            }
+            for &dim in shape {
+                usize::try_from(dim).map_err(|_| {
+                    Error::new(
+                        ruby.exception_arg_error(),
+                        format!("dimension {dim} of shape invalid"),
+                    )
+                })?;
+            }
+        }
+
+        let data = view.inner.data;
+        if data.is_null() {
+            Err(Error::new(ruby.exception_runtime_error(), "data is NULL"))?;
+        }
+        let ptr = data.cast::<T>();
+        if !ptr.is_aligned() {
+            Err(Error::new(
+                ruby.exception_runtime_error(),
+                "data not aligned",
+            ))?;
+        }
+
+        Ok(view)
     }
 
-    fn obj(&self) -> Value {
-        unsafe { std::mem::transmute::<VALUE, Value>(self.inner.obj) }
+    pub fn ndim(&self) -> usize {
+        usize::try_from(self.inner.ndim).expect("ndim validated in get()")
     }
 
-    pub fn ndim(&self) -> i64 {
-        self.inner.ndim
+    pub fn byte_size(&self) -> usize {
+        usize::try_from(self.inner.byte_size).expect("byte_size validated in get()")
     }
 
-    pub fn byte_size(&self) -> Result<usize, Error> {
-        usize::try_from(self.inner.byte_size).map_err(|err| {
-            let obj = self.obj();
-            let ruby = Ruby::get_with(obj);
-            Error::new(ruby.exception_runtime_error(), format!("{err}"))
-        })
+    pub fn shape(&self) -> Option<&[usize]> {
+        if self.inner.shape.is_null() {
+            return None;
+        }
+        // SAFETY: validated in get()
+        Some(unsafe { slice::from_raw_parts(self.inner.shape.cast::<usize>(), self.ndim()) })
     }
 
     pub fn is_readonly(&self) -> bool {
@@ -163,49 +229,61 @@ impl MemoryView {
         if self.inner.format.is_null() {
             None
         } else {
-            unsafe { CStr::from_ptr(self.inner.format).to_str() }.ok()
+            // SAFETY: format is valid because parse_item_format() is called in get()
+            Some(
+                unsafe { CStr::from_ptr(self.inner.format) }
+                    .to_str()
+                    .unwrap(),
+            )
         }
     }
 
-    pub fn data<T>(&self) -> Result<&[T], Error> {
-        let n_items = self.byte_size()? / size_of::<T>();
+    pub fn data(&self) -> &[T] {
+        let n_items = self.byte_size() / size_of::<T>();
         let data = self.inner.data;
-        if data.is_null() {
-            let ruby = Ruby::get_with(self.obj());
-            return Err(Error::new(ruby.exception_runtime_error(), "data is NULL"));
-        }
         let ptr = data.cast::<T>();
-        if !ptr.is_aligned() {
-            let ruby = Ruby::get_with(self.obj());
-            return Err(Error::new(
-                ruby.exception_runtime_error(),
-                "data not aligned",
-            ));
-        }
 
-        Ok(unsafe { slice::from_raw_parts(ptr, n_items) })
+        unsafe { slice::from_raw_parts(ptr, n_items) }
     }
 
-    pub fn data_as_mut<T>(&mut self) -> Result<&mut [T], Error> {
-        if self.is_readonly() {
-            let ruby = Ruby::get_with(self.obj());
-            return Err(Error::new(ruby.exception_runtime_error(), "not mutable"));
-        }
-        let n_items = self.byte_size()? / size_of::<T>();
+    pub fn data_as_mut(&mut self) -> &mut [T] {
+        let n_items = self.byte_size() / size_of::<T>();
         let data = self.inner.data;
-        if data.is_null() {
-            let ruby = Ruby::get_with(self.obj());
-            return Err(Error::new(ruby.exception_runtime_error(), "data is NULL"));
-        }
         let ptr = data.cast::<T>();
-        if !ptr.is_aligned() {
-            let ruby = Ruby::get_with(self.obj());
-            return Err(Error::new(
-                ruby.exception_runtime_error(),
-                "data not aligned",
-            ));
-        }
 
-        Ok(unsafe { slice::from_raw_parts_mut(ptr, n_items) })
+        unsafe { slice::from_raw_parts_mut(ptr, n_items) }
+    }
+
+    // Just for validation and retrieving item size
+    // TODO: Implement parse_item_format() properly
+    fn validate_format(ruby: &Ruby, format: &CStr) -> Result<usize, Error> {
+        let mut item_size = -1;
+
+        magnus::rb_sys::protect(|| {
+            item_size = unsafe {
+                rb_memory_view_parse_item_format(
+                    format.as_ptr(),
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                )
+            };
+            Qnil.into()
+        })?;
+
+        if item_size < 0 {
+            Err(Error::new(
+                ruby.exception_runtime_error(),
+                "failed to parse format",
+            ))
+        } else {
+            let item_size = usize::try_from(item_size).map_err(|_| {
+                Error::new(
+                    ruby.exception_runtime_error(),
+                    "format parse returned invalid item_size",
+                )
+            })?;
+            Ok(item_size)
+        }
     }
 }

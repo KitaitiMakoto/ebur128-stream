@@ -9,7 +9,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-magnus = { version = "0.8.2" }
+magnus = { version = "0.8.2", features = ["rb-sys"] }
 rb-sys = { version = "0.9", features = ["stable-api-compiled-fallback"] }
 ebur128-stream-rs = { package = "ebur128-stream", version = "0.2.0", features= ["normalize"] }
 
