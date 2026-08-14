@@ -4,3 +4,5 @@ $LOAD_PATH.unshift File.expand_path("../lib", __dir__)
 require "ebur128_stream"
 
 require "test-unit"
+require "numo/narray/alt"
+require "ndav/numo/narray"

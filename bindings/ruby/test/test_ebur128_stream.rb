@@ -39,6 +39,27 @@ class EBUR128StreamTest < Test::Unit::TestCase
     end
   end
 
+    test "push_interleaved MemoryView" do
+    analyzer = Analyzer.new(channels: [:left, :right], modes: [:all])
+
+    # Assigning an narray to a variable causes segmentation fault:
+    # 
+    # > ruby(354,0x1f9285d80) malloc: *** error for object 0x7c7aef0ba6980052: pointer being freed was not allocated
+    # > ruby(354,0x1f9285d80) malloc: *** set a breakpoint in malloc_error_break to debug
+    # 
+    # valid_data = Numo::SFloat[1.0, 1.0, 2.0, 2.0, 3.0, 3.0]
+    # assert_nothing_raised do
+    #   analyzer.push_interleaved valid_data
+    # end
+
+    assert_nothing_raised do
+      analyzer.push_interleaved Numo::SFloat[1.0, 1.0, 2.0, 2.0, 3.0, 3.0]
+    end
+    assert_raise ArgumentError do
+      analyzer.push_interleaved Numo::SFloat[1.0, 1.0, 2.0]
+    end
+  end
+
   test "push_planar" do
     analyzer = Analyzer.new(channels: [:left, :right], modes: [:all])
     assert_nothing_raised do
@@ -47,6 +68,17 @@ class EBUR128StreamTest < Test::Unit::TestCase
     end
     assert_raise ArgumentError do
       analyzer.push_planar [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]
+    end
+  end
+
+  test "push_planar MemoryView" do
+    analyzer = Analyzer.new(channels: [:left, :right], modes: [:all])
+    assert_nothing_raised do
+      analyzer.push_planar Numo::SFloat[[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]
+      analyzer.push_planar Numo::SFloat[[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]
+    end
+    assert_raise ArgumentError do
+      analyzer.push_planar Numo::SFloat[[1.0, 2.0, 3.0], [1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]
     end
   end
 
