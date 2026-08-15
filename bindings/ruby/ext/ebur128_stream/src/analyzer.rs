@@ -6,7 +6,7 @@ use magnus::{
     scan_args::{get_kwargs, scan_args},
 };
 use std::{
-    cell::{RefCell, RefMut, Ref},
+    cell::{Ref, RefCell, RefMut},
     time::Duration,
 };
 
@@ -114,9 +114,13 @@ impl Analyzer {
     }
 
     fn analyzer<'a>(&'a self) -> Result<Ref<'a, engine::Analyzer>, Error> {
-        let analyzer = self.analyzer.try_borrow().map_err(|_| Error::runtime("analyzer already in use"))?;
+        let analyzer = self
+            .analyzer
+            .try_borrow()
+            .map_err(|_| Error::runtime("analyzer already in use"))?;
 
-        Ref::filter_map(analyzer, Option::as_ref).map_err(|_| Error::runtime("analyzer not initialized"))
+        Ref::filter_map(analyzer, Option::as_ref)
+            .map_err(|_| Error::runtime("analyzer not initialized"))
     }
 
     fn analyzer_mut<'a>(&'a self) -> Result<RefMut<'a, engine::Analyzer>, Error> {
