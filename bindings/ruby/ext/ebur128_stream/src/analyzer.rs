@@ -68,6 +68,10 @@ impl Analyzer {
         Ok(self.analyzer()?.sample_rate())
     }
 
+    fn channels(ruby: &Ruby, rb_self: &Self) -> Result<RArray, Error> {
+        Ok(Channels::from(rb_self.analyzer()?.channels()).try_into_rarray(ruby)?)
+    }
+
     fn samples_per_block(&self) -> Result<u32, Error> {
         Ok(self.analyzer()?.samples_per_block())
     }
@@ -138,6 +142,7 @@ pub(crate) fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
     let analyzer = module.define_class("Analyzer", ruby.class_object())?;
     analyzer.define_singleton_method("new", function!(Analyzer::new, -1))?;
     analyzer.define_method("sample_rate", method!(Analyzer::sample_rate, 0))?;
+    analyzer.define_method("channels", method!(Analyzer::channels, 0))?;
     analyzer.define_method("samples_per_block", method!(Analyzer::samples_per_block, 0))?;
     analyzer.define_method("push_interleaved", method!(Analyzer::push_interleaved, 1))?;
     analyzer.define_method("push_planar", method!(Analyzer::push_planar, 1))?;
