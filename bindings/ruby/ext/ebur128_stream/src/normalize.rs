@@ -1,7 +1,7 @@
-use crate::{error::Error, parse_channels_arg, samples::InterleavedSamples};
+use crate::{Channels, error::Error, samples::InterleavedSamples};
 use ebur128_stream_rs as engine;
 use magnus::{
-    RArray, RModule, Ruby, TryConvert, Value, function, method,
+    RModule, Ruby, TryConvert, Value, function, method,
     prelude::*,
     scan_args::{get_kwargs, scan_args},
 };
@@ -18,15 +18,13 @@ struct Normalizer {
 impl Normalizer {
     fn new(args: &[Value]) -> Result<Self, Error> {
         let args = scan_args::<(), (), (), (), _, ()>(args)?;
-        let kws = get_kwargs::<_, (u32, RArray), (Option<f64>, Option<f64>), ()>(
+        let kws = get_kwargs::<_, (u32, Channels), (Option<f64>, Option<f64>), ()>(
             args.keywords,
             &["sample_rate", "channels"],
             &["target_lufs", "true_peak_ceiling_dbtp"],
         )?;
         let (sample_rate, channels) = kws.required;
         let (target_lufs, true_peak_ceiling_dbtp) = kws.optional;
-
-        let channels = parse_channels_arg(channels)?;
 
         Ok(Self {
             sample_rate,

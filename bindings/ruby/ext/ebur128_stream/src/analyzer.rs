@@ -1,4 +1,4 @@
-use crate::{Error, InterleavedSamples, PlanarSamples, Report, Snapshot, parse_channels_arg};
+use crate::{Channels, Error, InterleavedSamples, PlanarSamples, Report, Snapshot};
 use ebur128_stream_rs as engine;
 use magnus::{
     Integer, Module, RArray, RModule, Ruby, Symbol, TryConvert, Value, function, method,
@@ -18,15 +18,15 @@ struct Analyzer {
 impl Analyzer {
     fn new(args: &[Value]) -> Result<Self, Error> {
         let args = scan_args::<(), (), (), (), _, ()>(args)?;
-        let kws = get_kwargs::<_, (RArray,), (Option<Integer>, Option<RArray>, Option<Integer>), ()>(
-            args.keywords,
-            &["channels"],
-            &["sample_rate", "modes", "expected_duration"],
-        )?;
+        let kws =
+            get_kwargs::<_, (Channels,), (Option<Integer>, Option<RArray>, Option<Integer>), ()>(
+                args.keywords,
+                &["channels"],
+                &["sample_rate", "modes", "expected_duration"],
+            )?;
         let (channels,) = kws.required;
         let (sample_rate, modes, expected_duration) = kws.optional;
 
-        let channels = parse_channels_arg(channels)?;
         let mut builder = engine::AnalyzerBuilder::new().channels(&channels);
 
         if let Some(sample_rate) = sample_rate {
