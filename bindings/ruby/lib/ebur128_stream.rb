@@ -23,6 +23,19 @@ module EBUR128Stream
     end
   end
 
+  class Snapshot
+    include Reportable
+
+    ATTRS = [
+      :momentary_lufs,
+      :short_term_lufs,
+      :integrated_lufs,
+      :loudness_range_lu,
+      :true_peak_dbtp,
+      :programme_duration_seconds
+    ]
+  end
+
   class Report
     include Reportable
 
