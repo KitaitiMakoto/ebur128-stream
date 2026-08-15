@@ -115,6 +115,7 @@ pub struct MemoryView<T> {
 }
 
 impl<T> Drop for MemoryView<T> {
+    // Causes segmentation fault in some cases. Needs the investigation.
     fn drop(&mut self) {
         let _ = magnus::rb_sys::protect(|| {
             // SAFETY: This guard is generated from successfully allocated rb_memory_view_t and drop() is called only once so it's not released more than once
