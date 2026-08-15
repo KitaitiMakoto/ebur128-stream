@@ -100,6 +100,19 @@ impl Analyzer {
         Ok(Snapshot { snapshot })
     }
 
+    fn reset(rb_self: &Self) -> Result<(), Error> {
+        let mut analyzer = rb_self
+            .analyzer
+            .try_borrow_mut()
+            .map_err(|_| Error::runtime("analyzer aldready in use"))?;
+        let analyzer = analyzer
+            .as_mut()
+            .ok_or_else(|| Error::runtime("analyzer not initialized"))?;
+        analyzer.reset();
+
+        Ok(())
+    }
+
     fn finalize(rb_self: &Self) -> Result<Report, Error> {
         let mut analyzer = rb_self
             .analyzer
@@ -121,6 +134,7 @@ pub(crate) fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
     analyzer.define_method("push_planar", method!(Analyzer::push_planar, 1))?;
     analyzer.define_method("snapshot", method!(Analyzer::snapshot, 0))?;
     analyzer.define_method("finalize", method!(Analyzer::finalize, 0))?;
+    analyzer.define_method("reset", method!(Analyzer::reset, 0))?;
 
     Ok(())
 }
