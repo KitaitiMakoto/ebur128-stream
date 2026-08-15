@@ -11,3 +11,10 @@ cargo "ebur128_stream"
 Rake::TestTask.new(test: :cargo)
 
 task default: :test
+
+task sync_version: ["lib/ebur128_stream/version.rb", "ext/ebur128_stream/Cargo.toml"] do |t|
+  require_relative t.sources[0]
+  sh "cargo", "set-version", "--manifest-path", t.sources[1], "--offline", EBUR128Stream::VERSION
+end
+
+task build: [:sync_version, :cargo]
