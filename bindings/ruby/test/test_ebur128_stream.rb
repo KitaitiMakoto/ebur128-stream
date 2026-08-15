@@ -103,4 +103,10 @@ class EBUR128StreamTest < Test::Unit::TestCase
     analyzer.reset
     assert_equal 0.0, analyzer.snapshot.programme_duration_seconds
   end
+
+  test "modes" do
+    analyzer = Analyzer.new(channels: [:left, :right], modes: [:momentary, :integrated])
+
+    assert_equal [:integrated, :momentary], analyzer.modes
+  end
 end
