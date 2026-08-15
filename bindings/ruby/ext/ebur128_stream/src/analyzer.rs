@@ -62,10 +62,10 @@ impl Analyzer {
     }
 
     // Segmentation fault occurs if samples: InterleavedSamples in arguments
-    fn push_interleaved(rb_self: &Self, samples: Value) -> Result<(), Error> {
+    fn push_interleaved(&self, samples: Value) -> Result<(), Error> {
         let samples = InterleavedSamples::try_convert(samples)?;
 
-        let mut analyzer = rb_self.analyzer.try_borrow_mut().map_err(Error::runtime)?;
+        let mut analyzer = self.analyzer.try_borrow_mut().map_err(Error::runtime)?;
         let analyzer = analyzer
             .as_mut()
             .ok_or_else(|| Error::runtime("analyzer not initialized"))?;
@@ -74,9 +74,9 @@ impl Analyzer {
         Ok(())
     }
 
-    fn push_planar(rb_self: &Self, samples: Value) -> Result<(), Error> {
+    fn push_planar(&self, samples: Value) -> Result<(), Error> {
         let samples = PlanarSamples::try_convert(samples)?;
-        let mut analyzer = rb_self
+        let mut analyzer = self
             .analyzer
             .try_borrow_mut()
             .map_err(|_| Error::runtime("analyzer already in use"))?;
@@ -88,8 +88,8 @@ impl Analyzer {
         Ok(())
     }
 
-    fn snapshot(rb_self: &Self) -> Result<Snapshot, Error> {
-        let mut analyzer = rb_self
+    fn snapshot(&self) -> Result<Snapshot, Error> {
+        let mut analyzer = self
             .analyzer
             .try_borrow_mut()
             .map_err(|_| Error::runtime("analyzer aldready in use"))?;
@@ -101,8 +101,8 @@ impl Analyzer {
         Ok(Snapshot { snapshot })
     }
 
-    fn reset(rb_self: &Self) -> Result<(), Error> {
-        let mut analyzer = rb_self
+    fn reset(&self) -> Result<(), Error> {
+        let mut analyzer = self
             .analyzer
             .try_borrow_mut()
             .map_err(|_| Error::runtime("analyzer aldready in use"))?;
@@ -114,8 +114,8 @@ impl Analyzer {
         Ok(())
     }
 
-    fn finalize(rb_self: &Self) -> Result<Report, Error> {
-        let mut analyzer = rb_self
+    fn finalize(&self) -> Result<Report, Error> {
+        let mut analyzer = self
             .analyzer
             .try_borrow_mut()
             .map_err(|_| Error::runtime("analyzer already in use"))?;

@@ -36,17 +36,17 @@ impl Normalizer {
         })
     }
 
-    fn normalize_in_place(rb_self: &Self, samples: Value) -> Result<NormalizeReport, Error> {
+    fn normalize_in_place(&self, samples: Value) -> Result<NormalizeReport, Error> {
         let mut frames = InterleavedSamples::try_convert(samples)?;
         if !frames.is_writable() {
             return Err(Error::argument("samples not writable"));
         }
         let mut normalizer =
-            engine::normalize::Normalizer::new(rb_self.sample_rate, &rb_self.channels);
-        if let Some(target_lufs) = rb_self.target_lufs {
+            engine::normalize::Normalizer::new(self.sample_rate, &self.channels);
+        if let Some(target_lufs) = self.target_lufs {
             normalizer = normalizer.target_lufs(target_lufs);
         }
-        if let Some(true_peak_ceiling_dbtp) = rb_self.true_peak_ceiling_dbtp {
+        if let Some(true_peak_ceiling_dbtp) = self.true_peak_ceiling_dbtp {
             normalizer = normalizer.true_peak_ceiling_dbtp(true_peak_ceiling_dbtp);
         }
 
@@ -65,28 +65,28 @@ struct NormalizeReport {
 }
 
 impl NormalizeReport {
-    fn measured_integrated_lufs(rb_self: &Self) -> Option<f64> {
-        rb_self.report.measured_integrated_lufs
+    fn measured_integrated_lufs(&self) -> Option<f64> {
+        self.report.measured_integrated_lufs
     }
 
-    fn measured_true_peak_dbtp(rb_self: &Self) -> Option<f64> {
-        rb_self.report.measured_true_peak_dbtp
+    fn measured_true_peak_dbtp(&self) -> Option<f64> {
+        self.report.measured_true_peak_dbtp
     }
 
-    fn target_lufs(rb_self: &Self) -> f64 {
-        rb_self.report.target_lufs
+    fn target_lufs(&self) -> f64 {
+        self.report.target_lufs
     }
 
-    fn true_peak_ceiling_dbtp(rb_self: &Self) -> Option<f64> {
-        rb_self.report.true_peak_ceiling_dbtp
+    fn true_peak_ceiling_dbtp(&self) -> Option<f64> {
+        self.report.true_peak_ceiling_dbtp
     }
 
-    fn applied_gain_db(rb_self: &Self) -> f64 {
-        rb_self.report.applied_gain_db
+    fn applied_gain_db(&self) -> f64 {
+        self.report.applied_gain_db
     }
 
-    fn limited_by_true_peak(rb_self: &Self) -> bool {
-        rb_self.report.limited_by_true_peak
+    fn limited_by_true_peak(&self) -> bool {
+        self.report.limited_by_true_peak
     }
 }
 

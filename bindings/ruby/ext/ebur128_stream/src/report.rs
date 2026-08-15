@@ -8,28 +8,28 @@ pub(crate) struct Report {
 }
 
 impl Report {
-    fn integrated_lufs(rb_self: &Self) -> Option<f64> {
-        rb_self.report.integrated_lufs()
+    fn integrated_lufs(&self) -> Option<f64> {
+        self.report.integrated_lufs()
     }
 
-    fn loudness_range_lu(rb_self: &Self) -> Option<f64> {
-        rb_self.report.loudness_range_lu()
+    fn loudness_range_lu(&self) -> Option<f64> {
+        self.report.loudness_range_lu()
     }
 
-    fn true_peak_dbtp(rb_self: &Self) -> Option<f64> {
-        rb_self.report.true_peak_dbtp()
+    fn true_peak_dbtp(&self) -> Option<f64> {
+        self.report.true_peak_dbtp()
     }
 
-    fn momentary_max_lufs(rb_self: &Self) -> Option<f64> {
-        rb_self.report.momentary_max_lufs()
+    fn momentary_max_lufs(&self) -> Option<f64> {
+        self.report.momentary_max_lufs()
     }
 
-    fn short_term_max_lufs(rb_self: &Self) -> Option<f64> {
-        rb_self.report.short_term_max_lufs()
+    fn short_term_max_lufs(&self) -> Option<f64> {
+        self.report.short_term_max_lufs()
     }
 
-    fn programme_duration_seconds(rb_self: &Self) -> f64 {
-        rb_self.report.programme_duration_seconds()
+    fn programme_duration_seconds(&self) -> f64 {
+        self.report.programme_duration_seconds()
     }
 }
 
