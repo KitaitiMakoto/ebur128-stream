@@ -72,6 +72,16 @@ impl Analyzer {
         Ok(Channels::from(rb_self.analyzer()?.channels()).try_into_rarray(ruby)?)
     }
 
+    fn modes<'a>(ruby: &Ruby, rb_self: &'a Self) -> Result<RArray, Error> {
+        let syms = rb_self
+            .analyzer()?
+            .modes()
+            .iter_names()
+            .map(|mode| ruby.to_symbol(mode.0))
+            .collect::<Vec<Symbol>>();
+        Ok(ruby.ary_new_from_values(&syms))
+    }
+
     fn samples_per_block(&self) -> Result<u32, Error> {
         Ok(self.analyzer()?.samples_per_block())
     }
@@ -143,6 +153,7 @@ pub(crate) fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
     analyzer.define_singleton_method("new", function!(Analyzer::new, -1))?;
     analyzer.define_method("sample_rate", method!(Analyzer::sample_rate, 0))?;
     analyzer.define_method("channels", method!(Analyzer::channels, 0))?;
+    analyzer.define_method("modes", method!(Analyzer::modes, 0))?;
     analyzer.define_method("samples_per_block", method!(Analyzer::samples_per_block, 0))?;
     analyzer.define_method("push_interleaved", method!(Analyzer::push_interleaved, 1))?;
     analyzer.define_method("push_planar", method!(Analyzer::push_planar, 1))?;
