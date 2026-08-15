@@ -77,7 +77,7 @@ impl Analyzer {
             .analyzer()?
             .modes()
             .iter_names()
-            .map(|mode| ruby.to_symbol(mode.0))
+            .map(|mode| ruby.to_symbol(mode.0.to_lowercase()))
             .collect::<Vec<Symbol>>();
         Ok(ruby.ary_new_from_values(&syms))
     }

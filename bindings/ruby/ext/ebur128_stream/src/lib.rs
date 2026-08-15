@@ -60,7 +60,9 @@ impl Deref for Channels {
 
 impl<'a> From<&'a [engine::Channel]> for Channels {
     fn from(value: &'a [engine::Channel]) -> Self {
-        Self { inner: value.to_vec().into_iter().collect() }
+        Self {
+            inner: value.to_vec().into_iter().collect(),
+        }
     }
 }
 
@@ -77,21 +79,30 @@ impl TryConvert for Channels {
 
 impl Channels {
     fn try_into_rarray(&self, ruby: &Ruby) -> Result<RArray, magnus::Error> {
-        let syms = self.inner.iter().map(|channel| {
-            use engine::Channel::*;
+        let syms = self
+            .inner
+            .iter()
+            .map(|channel| {
+                use engine::Channel::*;
 
-            let str = match channel {
-                Left => "left",
-                Right => "right",
-                Center => "center",
-                LeftSurround => "left_surround",
-                RightSurround => "right_surround",
-                Lfe => "lfe",
-                Other => "other",
-                _ => return Err(magnus::Error::new(ruby.exception_runtime_error(), "couldn't convert to Symbol: {channel}"))
-            };
-            Ok(ruby.to_symbol(str))
-        }).collect::<Result<Vec<Symbol>, magnus::Error>>()?;
+                let str = match channel {
+                    Left => "left",
+                    Right => "right",
+                    Center => "center",
+                    LeftSurround => "left_surround",
+                    RightSurround => "right_surround",
+                    Lfe => "lfe",
+                    Other => "other",
+                    _ => {
+                        return Err(magnus::Error::new(
+                            ruby.exception_runtime_error(),
+                            "couldn't convert to Symbol: {channel}",
+                        ));
+                    }
+                };
+                Ok(ruby.to_symbol(str))
+            })
+            .collect::<Result<Vec<Symbol>, magnus::Error>>()?;
         Ok(ruby.ary_new_from_values(&syms))
     }
 
