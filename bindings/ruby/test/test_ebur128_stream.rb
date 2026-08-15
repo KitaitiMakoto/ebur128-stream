@@ -94,4 +94,13 @@ class EBUR128StreamTest < Test::Unit::TestCase
       analyzer.finalize
     end
   end
+
+  test "reset" do
+    analyzer = Analyzer.new(channels: [:left, :right], modes: [:all])
+    analyzer.push_interleaved [1.0] * 48_000 * 2
+
+    assert_equal 1.0, analyzer.snapshot.programme_duration_seconds
+    analyzer.reset
+    assert_equal 0.0, analyzer.snapshot.programme_duration_seconds
+  end
 end
