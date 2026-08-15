@@ -16,6 +16,36 @@ use ebur128_stream_rs as engine;
 use magnus::{RArray, Ruby, Symbol, TryConvert, Value};
 use std::ops::Deref;
 
+struct Channel(engine::Channel);
+
+impl From<Channel> for engine::Channel {
+    fn from(value: Channel) -> Self {
+        value.0
+    }
+}
+
+impl TryConvert for Channel {
+    fn try_convert(val: Value) -> Result<Self, magnus::Error> {
+        let channel = Symbol::try_convert(val)?;
+        Ok(match channel.name()?.as_ref() {
+            "left" => Self(engine::Channel::Left),
+            "right" => Self(engine::Channel::Right),
+            "center" => Self(engine::Channel::Center),
+            "left_surround" => Self(engine::Channel::LeftSurround),
+            "right_surround" => Self(engine::Channel::RightSurround),
+            "lfe" => Self(engine::Channel::Lfe),
+            "other" => Self(engine::Channel::Other),
+            _ => {
+                let ruby = Ruby::get_with(val);
+                return Err(magnus::Error::new(
+                    ruby.exception_arg_error(),
+                    format!("unknown channel: {val}"),
+                ));
+            }
+        })
+    }
+}
+
 pub(crate) struct Channels {
     inner: Vec<engine::Channel>,
 }
@@ -30,32 +60,12 @@ impl Deref for Channels {
 
 impl TryConvert for Channels {
     fn try_convert(val: Value) -> Result<Self, magnus::Error> {
-        use engine::Channel::*;
-
-        let array = RArray::try_convert(val)?;
-        let result: Result<Vec<engine::Channel>, magnus::Error> = array
-            .into_iter()
-            .map(|value| {
-                let ch = Symbol::try_convert(value)?;
-                match ch.name()?.as_ref() {
-                    "left" => Ok(Left),
-                    "right" => Ok(Right),
-                    "center" => Ok(Center),
-                    "left_surround" => Ok(LeftSurround),
-                    "right_surround" => Ok(RightSurround),
-                    "lfe" => Ok(Lfe),
-                    "other" => Ok(Other),
-                    _ => {
-                        let ruby = Ruby::get_with(val);
-                        Err(magnus::Error::new(
-                            ruby.exception_runtime_error(),
-                            format!("unknown channel: {ch}"),
-                        ))
-                    }
-                }
-            })
-            .collect();
-        Ok(Self { inner: result? })
+        Ok(Self {
+            inner: RArray::try_convert(val)?
+                .into_iter()
+                .map(|value| Ok(Channel::try_convert(value)?.into()))
+                .collect::<Result<Vec<engine::Channel>, magnus::Error>>()?,
+        })
     }
 }
 
