@@ -21,6 +21,10 @@ module EBUR128Stream
         attrs: self.class::ATTRS.collect {|attr| "#{attr}=#{send(attr).inspect}"}.join(" ")
       }
     end
+
+    def ==(other)
+      deconstruct_keys(nil) == other.deconstruct_keys(nil)
+    end
   end
 
   class Snapshot
