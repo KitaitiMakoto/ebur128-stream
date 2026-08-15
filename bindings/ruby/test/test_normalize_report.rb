@@ -8,7 +8,7 @@ class TestNormalizeReport < Test::Unit::TestCase
     normalizer = Normalizer.new(channels: [:left, :right], sample_rate:)
     frame = 2 * Math::PI / (sample_rate / 4)
     samples = sample_rate.times.flat_map do |n|
-      value = Math.cos(frame * n) * 10
+      Math.cos(frame * n) * 10
     end
     @report = normalizer.normalize_in_place(samples)
   end
