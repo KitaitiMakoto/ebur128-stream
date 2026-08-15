@@ -1,6 +1,9 @@
-use magnus::{Error, Ruby, Value, rb_sys::protect};
+use magnus::{
+    Error, Ruby, Value,
+    rb_sys::{AsRawValue, protect},
+};
 use rb_sys::{
-    Qnil, VALUE, rb_memory_view_get, rb_memory_view_parse_item_format, rb_memory_view_release,
+    Qnil, rb_memory_view_get, rb_memory_view_parse_item_format, rb_memory_view_release,
     rb_memory_view_t,
     ruby_memory_view_flags::{
         RUBY_MEMORY_VIEW_ANY_CONTIGUOUS, RUBY_MEMORY_VIEW_COLUMN_MAJOR, RUBY_MEMORY_VIEW_FORMAT,
@@ -131,7 +134,7 @@ impl<T> MemoryView<T> {
     pub fn get(obj: Value, flags: Flags) -> Result<Self, Error> {
         let ruby = Ruby::get_with(obj);
 
-        let obj = unsafe { std::mem::transmute::<Value, VALUE>(obj) };
+        let obj = obj.as_raw();
         let mut view = MaybeUninit::uninit();
 
         let mut result = false;
