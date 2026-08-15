@@ -6,8 +6,7 @@ use magnus::{
     scan_args::{get_kwargs, scan_args},
 };
 use std::{
-    borrow::Borrow,
-    cell::{RefCell, RefMut},
+    cell::{RefCell, RefMut, Ref},
     time::Duration,
 };
 
@@ -65,6 +64,14 @@ impl Analyzer {
         })
     }
 
+    fn sample_rate(&self) -> Result<u32, Error> {
+        Ok(self.analyzer()?.sample_rate())
+    }
+
+    fn samples_per_block(&self) -> Result<u32, Error> {
+        Ok(self.analyzer()?.samples_per_block())
+    }
+
     // Segmentation fault occurs if samples: InterleavedSamples in arguments
     fn push_interleaved(&self, samples: Value) -> Result<(), Error> {
         let samples = InterleavedSamples::try_convert(samples)?;
@@ -106,6 +113,12 @@ impl Analyzer {
         Ok(Report { report })
     }
 
+    fn analyzer<'a>(&'a self) -> Result<Ref<'a, engine::Analyzer>, Error> {
+        let analyzer = self.analyzer.try_borrow().map_err(|_| Error::runtime("analyzer already in use"))?;
+
+        Ref::filter_map(analyzer, Option::as_ref).map_err(|_| Error::runtime("analyzer not initialized"))
+    }
+
     fn analyzer_mut<'a>(&'a self) -> Result<RefMut<'a, engine::Analyzer>, Error> {
         let analyzer = self
             .analyzer
@@ -120,6 +133,8 @@ impl Analyzer {
 pub(crate) fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
     let analyzer = module.define_class("Analyzer", ruby.class_object())?;
     analyzer.define_singleton_method("new", function!(Analyzer::new, -1))?;
+    analyzer.define_method("sample_rate", method!(Analyzer::sample_rate, 0))?;
+    analyzer.define_method("samples_per_block", method!(Analyzer::samples_per_block, 0))?;
     analyzer.define_method("push_interleaved", method!(Analyzer::push_interleaved, 1))?;
     analyzer.define_method("push_planar", method!(Analyzer::push_planar, 1))?;
     analyzer.define_method("snapshot", method!(Analyzer::snapshot, 0))?;
