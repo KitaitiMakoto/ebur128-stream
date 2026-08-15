@@ -61,6 +61,7 @@ impl Analyzer {
         })
     }
 
+    // Segmentation fault occurs if samples: InterleavedSamples in arguments
     fn push_interleaved(rb_self: &Self, samples: Value) -> Result<(), Error> {
         let samples = InterleavedSamples::try_convert(samples)?;
 
@@ -73,8 +74,7 @@ impl Analyzer {
         Ok(())
     }
 
-    fn push_planar(rb_self: &Self, samples: Value) -> Result<(), Error> {
-        let samples = PlanarSamples::try_convert(samples)?;
+    fn push_planar(rb_self: &Self, samples: PlanarSamples) -> Result<(), Error> {
         let mut analyzer = rb_self
             .analyzer
             .try_borrow_mut()
