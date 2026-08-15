@@ -1,7 +1,7 @@
-use crate::{Error, InterleavedSamples, PlanarSamples, Report, parse_channels_arg};
+use crate::{Error, InterleavedSamples, PlanarSamples, Report, Snapshot, parse_channels_arg};
 use ebur128_stream_rs as engine;
 use magnus::{
-    Integer, RArray, RModule, Ruby, Symbol, TryConvert, Value, function, method,
+    Integer, Module, RArray, RModule, Ruby, Symbol, TryConvert, Value, function, method,
     prelude::*,
     scan_args::{get_kwargs, scan_args},
 };
@@ -87,6 +87,19 @@ impl Analyzer {
         Ok(())
     }
 
+    fn snapshot(rb_self: &Self) -> Result<Snapshot, Error> {
+        let mut analyzer = rb_self
+            .analyzer
+            .try_borrow_mut()
+            .map_err(|_| Error::runtime("analyzer aldready in use"))?;
+        let analyzer = analyzer
+            .as_mut()
+            .ok_or_else(|| Error::runtime("analyzer not initialized"))?;
+        let snapshot = analyzer.snapshot();
+
+        Ok(Snapshot { snapshot })
+    }
+
     fn finalize(rb_self: &Self) -> Result<Report, Error> {
         let mut analyzer = rb_self
             .analyzer
@@ -106,6 +119,7 @@ pub(crate) fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
     analyzer.define_singleton_method("new", function!(Analyzer::new, -1))?;
     analyzer.define_method("push_interleaved", method!(Analyzer::push_interleaved, 1))?;
     analyzer.define_method("push_planar", method!(Analyzer::push_planar, 1))?;
+    analyzer.define_method("snapshot", method!(Analyzer::snapshot, 0))?;
     analyzer.define_method("finalize", method!(Analyzer::finalize, 0))?;
 
     Ok(())

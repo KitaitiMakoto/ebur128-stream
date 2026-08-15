@@ -1,10 +1,10 @@
 use crate::Error;
-use magnus::{Ruby, RModule, method, prelude::*};
 use ebur128_stream_rs as engine;
+use magnus::{RModule, Ruby, method, prelude::*};
 
 #[magnus::wrap(class = "EBUR128Stream::Snapshot")]
 pub(crate) struct Snapshot {
-    snapshot: engine::Snapshot,
+    pub(crate) snapshot: engine::Snapshot,
 }
 
 impl Snapshot {
@@ -36,10 +36,7 @@ impl Snapshot {
 pub(crate) fn init(ruby: &Ruby, module: &RModule) -> Result<(), Error> {
     let snapshot = module.define_class("Snapshot", ruby.class_object())?;
     snapshot.define_method("momentary_lufs", method!(Snapshot::momentary_lufs, 0))?;
-    snapshot.define_method(
-        "short_term_lufs",
-        method!(Snapshot::short_term_lufs, 0),
-    )?;
+    snapshot.define_method("short_term_lufs", method!(Snapshot::short_term_lufs, 0))?;
     snapshot.define_method("integrated_lufs", method!(Snapshot::integrated_lufs, 0))?;
     snapshot.define_method("loudness_range_lu", method!(Snapshot::loudness_range_lu, 0))?;
     snapshot.define_method("true_peak_dbtp", method!(Snapshot::true_peak_dbtp, 0))?;
