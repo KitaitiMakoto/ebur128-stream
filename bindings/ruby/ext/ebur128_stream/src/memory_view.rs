@@ -1,4 +1,4 @@
-use magnus::{Error, Ruby, Value};
+use magnus::{Error, Ruby, Value, rb_sys::protect};
 use rb_sys::{
     Qnil, VALUE, rb_memory_view_get, rb_memory_view_parse_item_format, rb_memory_view_release,
     rb_memory_view_t,
@@ -117,7 +117,7 @@ pub struct MemoryView<T> {
 impl<T> Drop for MemoryView<T> {
     // Causes segmentation fault in some cases. Needs the investigation.
     fn drop(&mut self) {
-        let _ = magnus::rb_sys::protect(|| {
+        let _ = protect(|| {
             // SAFETY: This guard is generated from successfully allocated rb_memory_view_t and drop() is called only once so it's not released more than once
             unsafe {
                 rb_memory_view_release(&mut self.inner);
@@ -135,7 +135,7 @@ impl<T> MemoryView<T> {
         let mut view = MaybeUninit::uninit();
 
         let mut result = false;
-        magnus::rb_sys::protect(|| {
+        protect(|| {
             result = unsafe { rb_memory_view_get(obj, view.as_mut_ptr(), flags.into()) };
             Qnil.into()
         })?;
@@ -267,7 +267,7 @@ impl<T> MemoryView<T> {
     fn validate_format(ruby: &Ruby, format: &CStr) -> Result<usize, Error> {
         let mut item_size = -1;
 
-        magnus::rb_sys::protect(|| {
+        protect(|| {
             item_size = unsafe {
                 rb_memory_view_parse_item_format(
                     format.as_ptr(),
