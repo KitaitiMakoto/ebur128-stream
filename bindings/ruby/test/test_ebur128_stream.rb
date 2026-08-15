@@ -109,4 +109,19 @@ class EBUR128StreamTest < Test::Unit::TestCase
 
     assert_equal [:integrated, :momentary], analyzer.modes
   end
+
+  test "push_interleaved Array and MemoryView" do
+    samples = generate_samples
+
+    analyzer_ary = Analyzer.new(channels: [:left, :right], modes: [:all])
+    analyzer_ary.push_interleaved samples
+    report_ary = analyzer_ary.finalize
+
+    samples_mv = Numo::SFloat.cast(samples)
+    analyzer_mv = Analyzer.new(channels: [:left, :right], modes: [:all])
+    analyzer_mv.push_interleaved samples_mv
+    report_mv = analyzer_mv.finalize
+
+    assert_equal report_ary, report_mv
+  end
 end

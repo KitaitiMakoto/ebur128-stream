@@ -36,9 +36,14 @@ class TestNormalizer < Test::Unit::TestCase
       samples_mv.to_a != samples
     end
 
-    normalizer.normalize_in_place(samples)
-    assert do
-      samples_mv == samples
+    samples2 = sample_rate.times.flat_map do |n|
+      Math.cos(frame * n) * 10
+    end
+    normalizer2 = Normalizer.new(channels: [:left, :right], sample_rate:)
+    normalizer2.normalize_in_place(samples2)
+    assert_equal samples2.length, samples_mv.length
+    samples_mv.each_with_index do |sample, i|
+      assert_in_delta sample, samples2[i], 0.001, "at sample #{i}"
     end
   end
 end
