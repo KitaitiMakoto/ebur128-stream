@@ -13,29 +13,8 @@ use crate::{
     snapshot::Snapshot,
 };
 use ebur128_stream_rs as engine;
+use magnus::{RArray, Ruby, Symbol, TryConvert, Value};
 use std::ops::Deref;
-
-// can make channels a slice?
-pub(crate) fn parse_channels_arg(channels: RArray) -> Result<Vec<engine::Channel>, Error> {
-    use engine::Channel::*;
-
-    channels
-        .into_iter()
-        .map(|value| {
-            let ch = Symbol::try_convert(value)?;
-            match ch.name()?.as_ref() {
-                "left" => Ok(Left),
-                "right" => Ok(Right),
-                "center" => Ok(Center),
-                "left_surround" => Ok(LeftSurround),
-                "right_surround" => Ok(RightSurround),
-                "lfe" => Ok(Lfe),
-                "other" => Ok(Other),
-                _ => Err(Error::argument(format!("unknown channel: {ch}")))?,
-            }
-        })
-        .collect()
-}
 
 pub(crate) struct Channels {
     inner: Vec<engine::Channel>,
