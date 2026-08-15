@@ -74,7 +74,8 @@ impl Analyzer {
         Ok(())
     }
 
-    fn push_planar(rb_self: &Self, samples: PlanarSamples) -> Result<(), Error> {
+    fn push_planar(rb_self: &Self, samples: Value) -> Result<(), Error> {
+        let samples = PlanarSamples::try_convert(samples)?;
         let mut analyzer = rb_self
             .analyzer
             .try_borrow_mut()
