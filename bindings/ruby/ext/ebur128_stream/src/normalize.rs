@@ -41,8 +41,7 @@ impl Normalizer {
         if !frames.is_writable() {
             return Err(Error::argument("samples not writable"));
         }
-        let mut normalizer =
-            engine::normalize::Normalizer::new(self.sample_rate, &self.channels);
+        let mut normalizer = engine::normalize::Normalizer::new(self.sample_rate, &self.channels);
         if let Some(target_lufs) = self.target_lufs {
             normalizer = normalizer.target_lufs(target_lufs);
         }

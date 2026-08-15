@@ -5,7 +5,11 @@ use magnus::{
     prelude::*,
     scan_args::{get_kwargs, scan_args},
 };
-use std::{cell::RefCell, time::Duration};
+use std::{
+    borrow::Borrow,
+    cell::{RefCell, RefMut},
+    time::Duration,
+};
 
 #[magnus::wrap(class = "EBUR128Stream::Analyzer")]
 struct Analyzer {
@@ -64,52 +68,27 @@ impl Analyzer {
     // Segmentation fault occurs if samples: InterleavedSamples in arguments
     fn push_interleaved(&self, samples: Value) -> Result<(), Error> {
         let samples = InterleavedSamples::try_convert(samples)?;
-
-        let mut analyzer = self.analyzer.try_borrow_mut().map_err(Error::runtime)?;
-        let analyzer = analyzer
-            .as_mut()
-            .ok_or_else(|| Error::runtime("analyzer not initialized"))?;
-        analyzer.push_interleaved(samples.as_slice())?;
+        self.analyzer_mut()?.push_interleaved(samples.as_slice())?;
 
         Ok(())
     }
 
     fn push_planar(&self, samples: Value) -> Result<(), Error> {
         let samples = PlanarSamples::try_convert(samples)?;
-        let mut analyzer = self
-            .analyzer
-            .try_borrow_mut()
-            .map_err(|_| Error::runtime("analyzer already in use"))?;
-        let analyzer = analyzer
-            .as_mut()
-            .ok_or_else(|| Error::runtime("analyzer not initialized"))?;
-        analyzer.push_planar(&samples.channel_slices())?;
+        self.analyzer_mut()?
+            .push_planar(&samples.channel_slices())?;
 
         Ok(())
     }
 
     fn snapshot(&self) -> Result<Snapshot, Error> {
-        let mut analyzer = self
-            .analyzer
-            .try_borrow_mut()
-            .map_err(|_| Error::runtime("analyzer aldready in use"))?;
-        let analyzer = analyzer
-            .as_mut()
-            .ok_or_else(|| Error::runtime("analyzer not initialized"))?;
-        let snapshot = analyzer.snapshot();
+        let snapshot = self.analyzer_mut()?.snapshot();
 
         Ok(Snapshot { snapshot })
     }
 
     fn reset(&self) -> Result<(), Error> {
-        let mut analyzer = self
-            .analyzer
-            .try_borrow_mut()
-            .map_err(|_| Error::runtime("analyzer aldready in use"))?;
-        let analyzer = analyzer
-            .as_mut()
-            .ok_or_else(|| Error::runtime("analyzer not initialized"))?;
-        analyzer.reset();
+        self.analyzer_mut()?.reset();
 
         Ok(())
     }
@@ -125,6 +104,16 @@ impl Analyzer {
         let report = analyzer.finalize();
 
         Ok(Report { report })
+    }
+
+    fn analyzer_mut<'a>(&'a self) -> Result<RefMut<'a, engine::Analyzer>, Error> {
+        let analyzer = self
+            .analyzer
+            .try_borrow_mut()
+            .map_err(|_| Error::runtime("analyzer already in use"))?;
+
+        RefMut::filter_map(analyzer, Option::as_mut)
+            .map_err(|_| Error::runtime("analyzer not initialized"))
     }
 }
 
