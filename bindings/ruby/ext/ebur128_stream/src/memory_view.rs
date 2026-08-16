@@ -118,7 +118,6 @@ pub struct MemoryView<T> {
 }
 
 impl<T> Drop for MemoryView<T> {
-    // Causes segmentation fault in some cases. Needs the investigation.
     fn drop(&mut self) {
         let _ = protect(|| {
             // SAFETY: This guard is generated from successfully allocated rb_memory_view_t and drop() is called only once so it's not released more than once
@@ -135,7 +134,7 @@ impl<T> MemoryView<T> {
         let ruby = Ruby::get_with(obj);
 
         let obj = obj.as_raw();
-        let mut view = MaybeUninit::uninit();
+        let mut view = MaybeUninit::zeroed();
 
         let mut result = false;
         protect(|| {
