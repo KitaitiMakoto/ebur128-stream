@@ -1,4 +1,69 @@
 module EBUR128Stream
   VERSION: String
   # See the writing guide of rbs: https://github.com/ruby/rbs#guides
+
+  class Analyzer
+    def self.new: (
+      channels: Array[Symbol],
+      ?sample_rate: Integer,
+      ?modes: Array[Symbol],
+      ?expected_duration: Integer
+    ) -> instance
+
+    def channels: -> Array[Symbol]
+    def sample_rate: -> Integer
+    def modes: -> Array[Symbol]
+    def expected_duration: -> Integer
+
+    def push_interleaved: (Array[Integer]) -> void
+    def push_planar: (Array[Array[Integer]]) -> void
+
+    def snapshot: -> Snapshot
+    def reset: -> void
+    def finalize: -> Report
+  end
+
+  class Normalizer
+    def new: (
+      sample_rate: Integer,
+      channels: Array[Symbol],
+      ?target_lufs: Integer,
+      ?true_peak_ceiling_dbtp: Integer
+    ) -> instance
+
+    def normalize_in_place: (Array[Integer]) -> NormalizeReport
+  end
+
+  class Snapshot
+    include Reportable
+
+    def momentary_lufs: -> (Integer | nil)
+    def short_term_lufs: -> (Integer | nil)
+    def integrated_lufs: -> (Integer | nil)
+    def loudness_range_lu: -> (Integer | nil)
+    def true_peak_dbtp: -> (Integer | nil)
+    def programme_duration_seconds: -> Integer
+  end
+
+  class Report
+    include Reportable
+
+    def integrated_lufs: -> (Integer | nil)
+    def loudness_range_lu: -> (Integer | nil)
+    def true_peak_dbtp: -> (Integer | nil)
+    def momentary_max_lufs: -> (Integer | nil)
+    def short_term_max_lufs: -> (Integer | nil)
+    def programme_duration_seconds: -> Integer
+  end
+
+  class NormalizeReport
+    include Reportable
+
+    def measured_integrated_lufs: -> (Integer | nil)
+    def measured_true_peak_dbtp: -> (Integer | nil)
+    def target_lufs: -> Integer
+    def true_peak_ceiling_dbtp: -> (Integer | nil)
+    def applied_gain_db: -> (Integer | nil)
+    def limited_by_true_peak: -> bool
+  end
 end
