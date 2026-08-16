@@ -1,7 +1,7 @@
 use crate::{Channels, error::Error, samples::InterleavedSamples};
 use ebur128_stream_rs as engine;
 use magnus::{
-    RModule, Ruby, TryConvert, Value, function, method,
+    RModule, Ruby, Value, function, method,
     prelude::*,
     scan_args::{get_kwargs, scan_args},
 };
@@ -34,9 +34,8 @@ impl Normalizer {
         })
     }
 
-    fn normalize_in_place(&self, samples: Value) -> Result<NormalizeReport, Error> {
-        let mut frames = InterleavedSamples::try_convert(samples)?;
-        if !frames.is_writable() {
+    fn normalize_in_place(&self, mut samples: InterleavedSamples) -> Result<NormalizeReport, Error> {
+        if !samples.is_writable() {
             return Err(Error::argument("samples not writable"));
         }
         let mut normalizer = engine::normalize::Normalizer::new(self.sample_rate, &self.channels);
@@ -48,9 +47,9 @@ impl Normalizer {
         }
 
         let report = normalizer
-            .normalize_in_place(frames.as_mut_slice())
+            .normalize_in_place(samples.as_mut_slice())
             .map_err(Error::runtime)?;
-        frames.write_back_in_place()?;
+        samples.write_back_in_place()?;
 
         Ok(NormalizeReport { report })
     }

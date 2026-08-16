@@ -86,20 +86,13 @@ impl Analyzer {
         Ok(self.analyzer()?.samples_per_block())
     }
 
-    // Segmentation fault occurs if samples: InterleavedSamples in arguments
-    fn push_interleaved(&self, samples: Value) -> Result<(), Error> {
-        let samples = InterleavedSamples::try_convert(samples)?;
-        self.analyzer_mut()?.push_interleaved(samples.as_slice())?;
-
-        Ok(())
+    fn push_interleaved(&self, samples: InterleavedSamples) -> Result<(), Error> {
+        Ok(self.analyzer_mut()?.push_interleaved(samples.as_slice())?)
     }
 
-    fn push_planar(&self, samples: Value) -> Result<(), Error> {
-        let samples = PlanarSamples::try_convert(samples)?;
-        self.analyzer_mut()?
-            .push_planar(&samples.channel_slices())?;
-
-        Ok(())
+    fn push_planar(&self, samples: PlanarSamples) -> Result<(), Error> {
+        Ok(self.analyzer_mut()?
+            .push_planar(&samples.channel_slices())?)
     }
 
     fn snapshot(&self) -> Result<Snapshot, Error> {
