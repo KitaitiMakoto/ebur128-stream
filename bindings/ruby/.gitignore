@@ -4,6 +4,7 @@
 /coverage/
 /doc/
 /pkg/
+/html/
 /spec/reports/
 /tmp/
 *.bundle
