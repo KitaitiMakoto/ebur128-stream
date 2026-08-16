@@ -3,12 +3,23 @@
 require "rubygems/tasks"
 require "rake/testtask"
 require "kar/dsl"
+require "rdoc/task"
+
+GEMSPEC = Gem::Specification.load("ebur128_stream.gemspec")
+
+LICENSE_FILES = FileList["LICENSE-APACHE", "LICENSE-MIT"]
+LICENSE_FILES.each do |license|
+  file license => "../../#{license}" do |t|
+    copy t.source, t.name
+  end
+end
 
 Gem::Tasks.new
 
 cargo "ebur128_stream"
 
 Rake::TestTask.new(test: :cargo)
+RDoc::Task.new
 
 task default: :test
 
@@ -17,4 +28,4 @@ task sync_version: ["lib/ebur128_stream/version.rb", "ext/ebur128_stream/Cargo.t
   sh "cargo", "set-version", "--manifest-path", t.sources[1], "--offline", EBUR128Stream::VERSION
 end
 
-task build: [:sync_version, :cargo]
+task build: [:sync_version, :cargo] + LICENSE_FILES
