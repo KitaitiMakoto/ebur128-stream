@@ -4,6 +4,20 @@ use crate::{
 };
 use magnus::{RArray, Ruby, TryConvert, Value, error::IntoError};
 
+fn is_acceptable_format(format: &str) -> bool {
+    match format.chars().next() {
+        Some('f') => true,
+
+        #[cfg(target_endian = "little")]
+        Some('e') => true,
+
+        #[cfg(target_endian = "big")]
+        Some('g') => true,
+
+        _ => false,
+    }
+}
+
 pub(crate) enum InterleavedSamples {
     Array { obj: RArray, samples: Vec<f32> },
     MemoryView { view: MemoryView<f32> },
@@ -66,26 +80,27 @@ impl InterleavedSamples {
         if let Ok(view) = view {
             if view.ndim() == 1
                 && let Some(format) = view.format()
+                && is_acceptable_format(format)
             {
                 // TODO: Check format more strictly(size, other expression)
-                if format == "f" {
-                    return Some(Self::MemoryView { view });
-                }
+                return Some(Self::MemoryView { view });
             }
         }
         let view = MemoryView::<f32>::get(val, Flags::format().any_contiguous());
         if let Ok(view) = view {
             if view.ndim() == 1
                 && let Some(format) = view.format()
-                && format == "f"
+                && is_acceptable_format(format)
             {
                 return Some(Self::MemoryView { view });
             }
         }
         let view = MemoryView::<f32>::get(val, Flags::simple());
         if let Ok(view) = view {
-            let format = view.format();
-            if view.ndim() == 1 && format.is_some() && format.unwrap() == "f" {
+            if view.ndim() == 1
+                && let Some(format) = view.format()
+                && is_acceptable_format(format)
+            {
                 return Some(Self::MemoryView { view });
             }
         }
@@ -135,7 +150,7 @@ impl PlanarSamples {
         if let Ok(view) = view {
             if view.ndim() == 2
                 && let Some(format) = view.format()
-                && format == "f"
+                && is_acceptable_format(format)
             {
                 return Some(Self::MemoryView { view });
             }
@@ -144,8 +159,8 @@ impl PlanarSamples {
         if let Ok(view) = view {
             if !view.is_readonly()
                 && view.ndim() == 2
-                && view.format().is_some()
-                && view.format().unwrap() == "f"
+                && let Some(format) = view.format()
+                && is_acceptable_format(format)
             {
                 return Some(Self::MemoryView { view });
             }
