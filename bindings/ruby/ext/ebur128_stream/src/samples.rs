@@ -25,8 +25,8 @@ pub(crate) enum InterleavedSamples {
 
 impl TryConvert for InterleavedSamples {
     fn try_convert(val: Value) -> Result<Self, magnus::Error> {
-        if let Some(memory_view) = Self::consume_memory_view(val) {
-            Ok(memory_view)
+        if let Some(view) = Self::consume_memory_view(val) {
+            Ok(Self::MemoryView { view })
         } else if let Some(obj) = RArray::from_value(val) {
             Ok(Self::Array {
                 obj,
@@ -75,7 +75,7 @@ impl InterleavedSamples {
         Ok(())
     }
 
-    fn consume_memory_view(val: Value) -> Option<Self> {
+    fn consume_memory_view(val: Value) -> Option<MemoryView<f32>> {
         let view = MemoryView::<f32>::get(val, Flags::writable().format().any_contiguous());
         if let Ok(view) = view {
             if view.ndim() == 1
@@ -83,7 +83,7 @@ impl InterleavedSamples {
                 && is_acceptable_format(format)
             {
                 // TODO: Check format more strictly(size, other expression)
-                return Some(Self::MemoryView { view });
+                return Some(view);
             }
         }
         let view = MemoryView::<f32>::get(val, Flags::format().any_contiguous());
@@ -92,7 +92,7 @@ impl InterleavedSamples {
                 && let Some(format) = view.format()
                 && is_acceptable_format(format)
             {
-                return Some(Self::MemoryView { view });
+                return Some(view);
             }
         }
         let view = MemoryView::<f32>::get(val, Flags::simple());
@@ -101,7 +101,7 @@ impl InterleavedSamples {
                 && let Some(format) = view.format()
                 && is_acceptable_format(format)
             {
-                return Some(Self::MemoryView { view });
+                return Some(view);
             }
         }
         None
@@ -115,8 +115,8 @@ pub(crate) enum PlanarSamples {
 
 impl TryConvert for PlanarSamples {
     fn try_convert(val: Value) -> Result<Self, magnus::Error> {
-        if let Some(memory_view) = Self::consume_memory_view(val) {
-            Ok(memory_view)
+        if let Some(view) = Self::consume_memory_view(val) {
+            Ok(Self::MemoryView { view })
         } else if let Some(obj) = RArray::from_value(val) {
             Ok(Self::Array {
                 samples: obj.to_vec()?,
@@ -145,14 +145,14 @@ impl PlanarSamples {
         }
     }
 
-    fn consume_memory_view(val: Value) -> Option<Self> {
+    fn consume_memory_view(val: Value) -> Option<MemoryView<f32>> {
         let view = MemoryView::<f32>::get(val, Flags::writable().format().row_major());
         if let Ok(view) = view {
             if view.ndim() == 2
                 && let Some(format) = view.format()
                 && is_acceptable_format(format)
             {
-                return Some(Self::MemoryView { view });
+                return Some(view);
             }
         }
         let view = MemoryView::<f32>::get(val, Flags::simple());
@@ -162,7 +162,7 @@ impl PlanarSamples {
                 && let Some(format) = view.format()
                 && is_acceptable_format(format)
             {
-                return Some(Self::MemoryView { view });
+                return Some(view);
             }
         }
         None
