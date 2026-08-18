@@ -1,4 +1,4 @@
-use crate::{Channels, error::Error, samples::InterleavedSamples};
+use crate::{Channels, error::Error, samples::WritableInterleavedSamples};
 use ebur128_stream_rs as engine;
 use magnus::{
     RModule, Ruby, Value, function, method,
@@ -34,10 +34,10 @@ impl Normalizer {
         })
     }
 
-    fn normalize_in_place(&self, mut samples: InterleavedSamples) -> Result<NormalizeReport, Error> {
-        if !samples.is_writable() {
-            return Err(Error::argument("samples not writable"));
-        }
+    fn normalize_in_place(
+        &self,
+        mut samples: WritableInterleavedSamples,
+    ) -> Result<NormalizeReport, Error> {
         let mut normalizer = engine::normalize::Normalizer::new(self.sample_rate, &self.channels);
         if let Some(target_lufs) = self.target_lufs {
             normalizer = normalizer.target_lufs(target_lufs);
