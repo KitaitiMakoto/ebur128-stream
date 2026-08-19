@@ -43,7 +43,7 @@ class TestNormalizer < Test::Unit::TestCase
     normalizer2.normalize_in_place(samples2)
     assert_equal samples2.length, samples_mv.length
     samples_mv.each_with_index do |sample, i|
-      assert_in_delta sample, samples2[i], 0.001, "at sample #{i}"
+      assert_in_delta samples2[i], sample, 0.001, "at sample #{i}"
     end
   end
 end
