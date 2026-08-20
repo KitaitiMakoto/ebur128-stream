@@ -1,10 +1,10 @@
 use magnus::{
     Error, Ruby, Value,
-    rb_sys::{AsRawValue, protect},
+    rb_sys::{AsRawValue, FromRawValue, protect},
 };
 use rb_sys::{
-    Qnil, rb_memory_view_get, rb_memory_view_parse_item_format, rb_memory_view_release,
-    rb_memory_view_t,
+    Qnil, rb_memory_view_get, rb_memory_view_item_component_t, rb_memory_view_parse_item_format,
+    rb_memory_view_prepare_item_desc, rb_memory_view_release, rb_memory_view_t,
     ruby_memory_view_flags::{
         RUBY_MEMORY_VIEW_ANY_CONTIGUOUS, RUBY_MEMORY_VIEW_COLUMN_MAJOR, RUBY_MEMORY_VIEW_FORMAT,
         RUBY_MEMORY_VIEW_INDIRECT, RUBY_MEMORY_VIEW_MULTI_DIMENSIONAL, RUBY_MEMORY_VIEW_ROW_MAJOR,
@@ -215,6 +215,10 @@ impl<T> MemoryView<T> {
         Ok(view)
     }
 
+    pub fn obj(&self) -> Value {
+        unsafe { Value::from_raw(self.inner.obj) }
+    }
+
     pub fn ndim(&self) -> usize {
         usize::try_from(self.inner.ndim).expect("ndim validated in get()")
     }
@@ -264,6 +268,23 @@ impl<T> MemoryView<T> {
         unsafe { slice::from_raw_parts_mut(ptr, n_items) }
     }
 
+    fn prepare_item_desc(&mut self) -> Result<(), magnus::Error> {
+        protect(|| {
+            unsafe {
+                rb_memory_view_prepare_item_desc(&mut self.inner as *mut rb_memory_view_t);
+            }
+            Qnil.into()
+        })?;
+
+        Ok(())
+    }
+
+    pub fn item_desc(&mut self) -> Result<ItemDesc, Error> {
+        let _ = self.prepare_item_desc();
+        let view: &Self = self;
+        ItemDesc::try_from(view)
+    }
+
     // Just for validation and retrieving item size
     // TODO: Implement parse_item_format() properly
     fn validate_format(ruby: &Ruby, format: &CStr) -> Result<usize, Error> {
@@ -294,6 +315,69 @@ impl<T> MemoryView<T> {
                 )
             })?;
             Ok(item_size)
+        }
+    }
+}
+
+pub struct ItemDesc {
+    length: usize,
+    components: Vec<ItemComponent>,
+}
+
+impl<T> TryFrom<&MemoryView<T>> for ItemDesc {
+    type Error = Error;
+
+    fn try_from(value: &MemoryView<T>) -> Result<Self, Error> {
+        let length = usize::try_from(value.inner.item_desc.length).map_err(|_| {
+            let ruby = Ruby::get_with(value.obj());
+            Error::new(ruby.exception_arg_error(), "invalid item_desc.length")
+        })?;
+        let components = value.inner.item_desc.components;
+        if (length == 0 && !components.is_null()) || (length > 0 && components.is_null()) {
+            let ruby = Ruby::get_with(value.obj());
+            return Err(Error::new(ruby.exception_arg_error(), "invalid item_desc"));
+        }
+        let components = unsafe { slice::from_raw_parts(components, length) };
+        Ok(Self {
+            length,
+            components: components.iter().map(ItemComponent::from).collect(),
+        })
+    }
+}
+
+impl IntoIterator for ItemDesc {
+    type Item = ItemComponent;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.components.into_iter()
+    }
+}
+
+impl ItemDesc {
+    pub fn len(&self) -> usize {
+        self.length
+    }
+}
+
+pub struct ItemComponent {
+    pub format: char,
+    pub is_native_size: bool,
+    pub is_little_endian: bool,
+    pub offset: usize,
+    pub size: usize,
+    pub repeat: usize,
+}
+
+impl<'a> From<&'a rb_memory_view_item_component_t> for ItemComponent {
+    fn from(value: &'a rb_memory_view_item_component_t) -> Self {
+        Self {
+            format: char::from(value.format as u8),
+            is_native_size: value.native_size_p,
+            is_little_endian: value.little_endian_p,
+            offset: value.offset as usize,
+            size: value.size as usize,
+            repeat: value.repeat as usize,
         }
     }
 }

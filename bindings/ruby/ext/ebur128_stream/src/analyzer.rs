@@ -91,7 +91,8 @@ impl Analyzer {
     }
 
     fn push_planar(&self, samples: PlanarSamples) -> Result<(), Error> {
-        Ok(self.analyzer_mut()?
+        Ok(self
+            .analyzer_mut()?
             .push_planar(&samples.channel_slices())?)
     }
 
