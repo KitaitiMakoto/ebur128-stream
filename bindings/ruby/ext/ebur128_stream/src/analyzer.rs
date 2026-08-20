@@ -72,7 +72,7 @@ impl Analyzer {
         Ok(Channels::from(rb_self.analyzer()?.channels()).try_into_rarray(ruby)?)
     }
 
-    fn modes<'a>(ruby: &Ruby, rb_self: &'a Self) -> Result<RArray, Error> {
+    fn modes(ruby: &Ruby, rb_self: &Self) -> Result<RArray, Error> {
         let syms = rb_self
             .analyzer()?
             .modes()
