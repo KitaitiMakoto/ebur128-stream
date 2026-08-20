@@ -280,7 +280,7 @@ impl<T> MemoryView<T> {
     }
 
     pub fn item_desc(&mut self) -> Result<ItemDesc, Error> {
-        let _ = self.prepare_item_desc();
+        self.prepare_item_desc()?;
         let view: &Self = self;
         ItemDesc::try_from(view)
     }

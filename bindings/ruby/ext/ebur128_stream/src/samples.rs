@@ -1,20 +1,26 @@
 use crate::{
     error::Error,
-    memory_view::{Flags, FlagsChainable, MemoryView},
+    memory_view::{Flags, FlagsChainable, ItemComponent, MemoryView},
 };
 use magnus::{RArray, Ruby, TryConvert, Value, error::IntoError};
 
-fn is_acceptable_format(format: &str) -> bool {
-    match format.chars().next() {
-        Some('f') => true,
+fn is_acceptable_component(component: ItemComponent) -> bool {
+    component.offset == 0
+        && component.repeat == 1
+        && is_acceptable_format(component.format)
+}
+
+fn is_acceptable_format(format: char) -> bool {
+    match format {
+        'f' => true,
 
         #[cfg(target_endian = "little")]
-        Some('e') => true,
+        'e' => true,
 
         #[cfg(target_endian = "big")]
-        Some('g') => true,
+        'g' => true,
 
-        _ => false,
+        _ => false
     }
 }
 
@@ -47,26 +53,30 @@ impl InterleavedSamples {
     }
 
     fn consume_memory_view(val: Value) -> Option<MemoryView<f32>> {
-        let view = MemoryView::<f32>::get(val, Flags::format().any_contiguous());
-        if let Ok(view) = view {
-            if view.ndim() == 1
-                && let Some(format) = view.format()
-                && is_acceptable_format(format)
-            {
-                // TODO: Check format more strictly(size, other expression)
+        let view = MemoryView::<f32>::get(val, Flags::any_contiguous());
+        if let Ok(mut view) = view {
+            if Self::is_acceptable(&mut view).unwrap_or(false) {
                 return Some(view);
             }
         }
         let view = MemoryView::<f32>::get(val, Flags::simple());
-        if let Ok(view) = view {
-            if view.ndim() == 1
-                && let Some(format) = view.format()
-                && is_acceptable_format(format)
-            {
+        if let Ok(mut view) = view {
+            if Self::is_acceptable(&mut view).unwrap_or(false) {
                 return Some(view);
             }
         }
         None
+    }
+
+    // TODO: Check format more strictly(size, other expression)
+    fn is_acceptable(view: &mut MemoryView<f32>) -> Result<bool, Error> {
+        let item_desc = view.item_desc()?;
+        Ok(view.ndim() == 1
+            && item_desc.len() == 1
+            && item_desc
+                .into_iter()
+                .next()
+                .is_some_and(is_acceptable_component))
     }
 }
 
@@ -112,27 +122,29 @@ impl WritableInterleavedSamples {
     }
 
     fn consume_memory_view(val: Value) -> Option<MemoryView<f32>> {
-        let view = MemoryView::<f32>::get(val, Flags::writable().format().any_contiguous());
-        if let Ok(view) = view {
-            if view.ndim() == 1
-                && let Some(format) = view.format()
-                && is_acceptable_format(format)
-            {
-                // TODO: Check format more strictly(size, other expression)
+        let view = MemoryView::<f32>::get(val, Flags::writable().any_contiguous());
+        if let Ok(mut view) = view {
+            if Self::is_acceptable(&mut view).unwrap_or(false) {
                 return Some(view);
             }
         }
         let view = MemoryView::<f32>::get(val, Flags::simple());
-        if let Ok(view) = view {
-            if view.ndim() == 1
-                && !view.is_readonly()
-                && let Some(format) = view.format()
-                && is_acceptable_format(format)
-            {
+        if let Ok(mut view) = view {
+            if !view.is_readonly() && Self::is_acceptable(&mut view).unwrap_or(false) {
                 return Some(view);
             }
         }
         None
+    }
+
+    fn is_acceptable(view: &mut MemoryView<f32>) -> Result<bool, Error> {
+        let item_desc = view.item_desc()?;
+        Ok(view.ndim() == 1
+            && item_desc.len() == 1
+            && item_desc
+                .into_iter()
+                .next()
+                .is_some_and(is_acceptable_component))
     }
 }
 
@@ -174,25 +186,28 @@ impl PlanarSamples {
     }
 
     fn consume_memory_view(val: Value) -> Option<MemoryView<f32>> {
-        let view = MemoryView::<f32>::get(val, Flags::format().row_major());
-        if let Ok(view) = view {
-            if view.ndim() == 2
-                && let Some(format) = view.format()
-                && is_acceptable_format(format)
-            {
+        let view = MemoryView::<f32>::get(val, Flags::row_major());
+        if let Ok(mut view) = view {
+            if Self::is_acceptable(&mut view).unwrap_or(false) {
                 return Some(view);
             }
         }
         let view = MemoryView::<f32>::get(val, Flags::simple());
-        if let Ok(view) = view {
-            if !view.is_readonly()
-                && view.ndim() == 2
-                && let Some(format) = view.format()
-                && is_acceptable_format(format)
-            {
+        if let Ok(mut view) = view {
+            if Self::is_acceptable(&mut view).unwrap_or(false) {
                 return Some(view);
             }
         }
         None
+    }
+
+    fn is_acceptable(view: &mut MemoryView<f32>) -> Result<bool, Error> {
+        let item_desc = view.item_desc()?;
+        Ok(view.ndim() == 2
+            && item_desc.len() == 1
+            && item_desc
+                .into_iter()
+                .next()
+                .is_some_and(is_acceptable_component))
     }
 }
