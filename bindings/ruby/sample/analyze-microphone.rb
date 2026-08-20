@@ -6,13 +6,20 @@ require "io/console"
 
 CHANNELS = [:left, :right]
 RATE = 48_000
-WIDTH = $stderr.winsize[1]
+HEIGHT = $stdout.winsize[0]
+WIDTH = $stdout.winsize[1]
+PADDING_BLOCK_START = HEIGHT / 2 - 2
+PADDING_INLINE = WIDTH / 5
+AREA_WIDTH = WIDTH - PADDING_INLINE * 2
 LIMIT = -70
 
 include NDAV::Converter
 
 def main(argv)
   analyser = setup_ebur128_stream
+
+  print "\e[2J"
+
   setup_gstreamer do |sample|
     # GStreamer's Gst::Sample is 2-D but EBUR128Stream requires 1-D.
     # Reshapes it using Numo::NArray
@@ -23,10 +30,7 @@ def main(argv)
     analyser.snapshot => {momentary_lufs:}
     next unless momentary_lufs
 
-    len = (-LIMIT + momentary_lufs) * (-WIDTH / LIMIT)
-    volume = "|" * len
-    padding = " " * (WIDTH - len)
-    print "\r#{volume}#{padding}"
+    render_loudness momentary_lufs
   end
 end
 
@@ -88,7 +92,19 @@ def setup_gstreamer
     pipeline.stop
     GC.start
   end
+end
 
+def render_loudness(loudness)
+  len = (-LIMIT + loudness) * (-AREA_WIDTH / LIMIT)
+  volume = "|" * len
+  ws = " " * (AREA_WIDTH - len)
+  print "\e[#{PADDING_BLOCK_START};#{PADDING_INLINE}H"
+  print "\e[#{PADDING_INLINE}G"
+  puts "#{volume}#{ws}"
+  puts
+  digits = "%.3f" % loudness
+  print "\e[#{WIDTH - PADDING_INLINE - digits.to_s.length}G"
+  print digits
 end
 
 main ARGV
