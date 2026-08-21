@@ -122,7 +122,7 @@ snapshot.true_peak_dbtp             #=> True peak so far in dBTP
 snapshot.loudness_range_lu          #=> Loudness range in LU
 ```
 
-The attributes may be `nil` when there are not enough samples or when the corresponding was not specified at initialization.
+The attributes may be `nil` when there are not enough samples or when the corresponding mode was not specified at initialization.
 
 EBUR128Stream::Snapshot implements `#to_h`:
 
