@@ -12,6 +12,7 @@ crate-type = ["cdylib"]
 magnus = { version = "0.8.2", features = ["rb-sys"] }
 rb-sys = { version = "0.9", features = ["stable-api-compiled-fallback"] }
 ebur128-stream-rs = { package = "ebur128-stream", version = "0.2.0", features= ["normalize", "simd"] }
+grey-knights = { version = "0.1.0" }
 
 [build-dependencies]
 rb-sys-env = "0.2.2"

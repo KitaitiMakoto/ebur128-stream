@@ -1,13 +1,9 @@
-use crate::{
-    error::Error,
-    memory_view::{Flags, FlagsChainable, ItemComponent, MemoryView},
-};
+use crate::error::Error;
+use grey_knights::memory_view::{Flags, FlagsChainable, ItemComponent, ValidatedMemoryView};
 use magnus::{RArray, Ruby, TryConvert, Value, error::IntoError};
 
 fn is_acceptable_component(component: ItemComponent) -> bool {
-    component.offset == 0
-        && component.repeat == 1
-        && is_acceptable_format(component.format)
+    component.offset == 0 && component.repeat == 1 && is_acceptable_format(component.format)
 }
 
 fn is_acceptable_format(format: char) -> bool {
@@ -20,13 +16,13 @@ fn is_acceptable_format(format: char) -> bool {
         #[cfg(target_endian = "big")]
         'g' => true,
 
-        _ => false
+        _ => false,
     }
 }
 
 pub(crate) enum InterleavedSamples {
     Array { samples: Vec<f32> },
-    MemoryView { view: MemoryView<f32> },
+    MemoryView { view: ValidatedMemoryView<f32> },
 }
 
 impl TryConvert for InterleavedSamples {
@@ -52,14 +48,14 @@ impl InterleavedSamples {
         }
     }
 
-    fn consume_memory_view(val: Value) -> Option<MemoryView<f32>> {
-        let view = MemoryView::<f32>::get(val, Flags::any_contiguous());
+    fn consume_memory_view(val: Value) -> Option<ValidatedMemoryView<f32>> {
+        let view = ValidatedMemoryView::<f32>::new(val, Flags::any_contiguous());
         if let Ok(mut view) = view {
             if Self::is_acceptable(&mut view).unwrap_or(false) {
                 return Some(view);
             }
         }
-        let view = MemoryView::<f32>::get(val, Flags::simple());
+        let view = ValidatedMemoryView::<f32>::new(val, Flags::simple());
         if let Ok(mut view) = view {
             if Self::is_acceptable(&mut view).unwrap_or(false) {
                 return Some(view);
@@ -69,7 +65,7 @@ impl InterleavedSamples {
     }
 
     // TODO: Check format more strictly(size, other expression)
-    fn is_acceptable(view: &mut MemoryView<f32>) -> Result<bool, Error> {
+    fn is_acceptable(view: &mut ValidatedMemoryView<f32>) -> Result<bool, Error> {
         let item_desc = view.item_desc()?;
         Ok(view.ndim() == 1
             && item_desc.len() == 1
@@ -82,7 +78,7 @@ impl InterleavedSamples {
 
 pub(crate) enum WritableInterleavedSamples {
     Array { obj: RArray, samples: Vec<f32> },
-    MemoryView { view: MemoryView<f32> },
+    MemoryView { view: ValidatedMemoryView<f32> },
 }
 
 impl TryConvert for WritableInterleavedSamples {
@@ -121,14 +117,14 @@ impl WritableInterleavedSamples {
         Ok(())
     }
 
-    fn consume_memory_view(val: Value) -> Option<MemoryView<f32>> {
-        let view = MemoryView::<f32>::get(val, Flags::writable().any_contiguous());
+    fn consume_memory_view(val: Value) -> Option<ValidatedMemoryView<f32>> {
+        let view = ValidatedMemoryView::<f32>::new(val, Flags::writable().any_contiguous());
         if let Ok(mut view) = view {
             if Self::is_acceptable(&mut view).unwrap_or(false) {
                 return Some(view);
             }
         }
-        let view = MemoryView::<f32>::get(val, Flags::simple());
+        let view = ValidatedMemoryView::<f32>::new(val, Flags::simple());
         if let Ok(mut view) = view {
             if !view.is_readonly() && Self::is_acceptable(&mut view).unwrap_or(false) {
                 return Some(view);
@@ -137,7 +133,7 @@ impl WritableInterleavedSamples {
         None
     }
 
-    fn is_acceptable(view: &mut MemoryView<f32>) -> Result<bool, Error> {
+    fn is_acceptable(view: &mut ValidatedMemoryView<f32>) -> Result<bool, Error> {
         let item_desc = view.item_desc()?;
         Ok(view.ndim() == 1
             && item_desc.len() == 1
@@ -150,7 +146,7 @@ impl WritableInterleavedSamples {
 
 pub(crate) enum PlanarSamples {
     Array { samples: Vec<Vec<f32>> },
-    MemoryView { view: MemoryView<f32> },
+    MemoryView { view: ValidatedMemoryView<f32> },
 }
 
 impl TryConvert for PlanarSamples {
@@ -185,14 +181,14 @@ impl PlanarSamples {
         }
     }
 
-    fn consume_memory_view(val: Value) -> Option<MemoryView<f32>> {
-        let view = MemoryView::<f32>::get(val, Flags::row_major());
+    fn consume_memory_view(val: Value) -> Option<ValidatedMemoryView<f32>> {
+        let view = ValidatedMemoryView::<f32>::new(val, Flags::row_major());
         if let Ok(mut view) = view {
             if Self::is_acceptable(&mut view).unwrap_or(false) {
                 return Some(view);
             }
         }
-        let view = MemoryView::<f32>::get(val, Flags::simple());
+        let view = ValidatedMemoryView::<f32>::new(val, Flags::simple());
         if let Ok(mut view) = view {
             if Self::is_acceptable(&mut view).unwrap_or(false) {
                 return Some(view);
@@ -201,7 +197,7 @@ impl PlanarSamples {
         None
     }
 
-    fn is_acceptable(view: &mut MemoryView<f32>) -> Result<bool, Error> {
+    fn is_acceptable(view: &mut ValidatedMemoryView<f32>) -> Result<bool, Error> {
         let item_desc = view.item_desc()?;
         Ok(view.ndim() == 2
             && item_desc.len() == 1
