@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
 
   spec.summary = "Streaming, zero-allocation EBU R128 loudness measurement."
   spec.description = "Ruby binding for Streaming, zero-allocation EBU R128 loudness measurement in pure Rust."
-  spec.homepage = "https://github.com/vanjamodrinjak21/ebur128-stream"
+  spec.homepage = "https://github.com/KitaitiMakoto/ebur128-stream/tree/main/bindings/ruby"
   spec.required_ruby_version = ">= 3.2.0"
   spec.metadata["allowed_push_host"] = "https://rubygems.org"
   spec.metadata["homepage_uri"] = spec.homepage
