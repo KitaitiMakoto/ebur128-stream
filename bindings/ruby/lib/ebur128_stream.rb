@@ -22,6 +22,21 @@ module EBUR128Stream
       }
     end
 
+    def pretty_print(q)
+      attrs = self.class::ATTRS
+      a_width = attrs.max_by(&:length).length
+
+      q.object_group self do
+        q.breakable
+        attrs.each_with_index do |attr, index|
+          q.comma_breakable unless index == 0
+          q.text attr.to_s.rjust(a_width)
+          q.text " = "
+          q.pp send(attr)
+        end
+      end
+    end
+
     def ==(other)
       deconstruct_keys(nil) == other.deconstruct_keys(nil)
     end
