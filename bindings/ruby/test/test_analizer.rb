@@ -21,6 +21,11 @@ class TestAnalyzer < Test::Unit::TestCase
     end
   end
 
+  test "new with nil" do
+    analyzer = Analyzer.new(channels: [:left, :right], sample_rate: nil)
+    assert_equal 48_000, analyzer.sample_rate
+  end
+
   test "push_interleaved" do
     analyzer = Analyzer.new(channels: [:left, :right], modes: [:all])
     assert_nothing_raised do
