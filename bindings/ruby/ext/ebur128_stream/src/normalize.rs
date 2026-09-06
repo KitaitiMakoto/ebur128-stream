@@ -18,7 +18,7 @@ struct Normalizer {
 impl Normalizer {
     fn new(args: &[Value]) -> Result<Self, Error> {
         let args = scan_args::<(), (), (), (), _, ()>(args)?;
-        let kws = get_kwargs::<_, (u32, Channels), (Option<f64>, Option<f64>), ()>(
+        let kws = get_kwargs::<_, (u32, Channels), (Option<Option<f64>>, Option<Option<f64>>), ()>(
             args.keywords,
             &["sample_rate", "channels"],
             &["target_lufs", "true_peak_ceiling_dbtp"],
@@ -29,8 +29,8 @@ impl Normalizer {
         Ok(Self {
             sample_rate,
             channels: channels.into_boxed_slice(),
-            target_lufs,
-            true_peak_ceiling_dbtp,
+            target_lufs: target_lufs.flatten(),
+            true_peak_ceiling_dbtp: true_peak_ceiling_dbtp.flatten(),
         })
     }
 

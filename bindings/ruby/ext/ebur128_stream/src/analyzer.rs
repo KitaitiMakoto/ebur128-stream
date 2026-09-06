@@ -19,7 +19,7 @@ impl Analyzer {
     fn new(args: &[Value]) -> Result<Self, Error> {
         let args = scan_args::<(), (), (), (), _, ()>(args)?;
         let kws =
-            get_kwargs::<_, (Channels,), (Option<Integer>, Option<RArray>, Option<Integer>), ()>(
+            get_kwargs::<_, (Channels,), (Option<Option<Integer>>, Option<Option<RArray>>, Option<Option<Integer>>), ()>(
                 args.keywords,
                 &["channels"],
                 &["sample_rate", "modes", "expected_duration"],
@@ -29,11 +29,11 @@ impl Analyzer {
 
         let mut builder = engine::AnalyzerBuilder::new().channels(&channels);
 
-        if let Some(sample_rate) = sample_rate {
+        if let Some(sample_rate) = sample_rate.flatten() {
             builder = builder.sample_rate(sample_rate.to_u32()?);
         }
 
-        if let Some(values) = modes {
+        if let Some(values) = modes.flatten() {
             use engine::Mode;
 
             let mut modes = Mode::empty();
@@ -53,7 +53,7 @@ impl Analyzer {
             }
             builder = builder.modes(modes);
         }
-        if let Some(expected_duration) = expected_duration {
+        if let Some(expected_duration) = expected_duration.flatten() {
             builder = builder.expected_duration(Duration::from_secs(expected_duration.to_u64()?));
         }
 
