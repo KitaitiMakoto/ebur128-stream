@@ -61,7 +61,7 @@ impl InterleavedSamples {
         }
         let view = MemoryView::<f32>::get(val, Flags::simple());
         if let Ok(mut view) = view {
-            if Self::is_acceptable(&mut view).unwrap_or(false) {
+            if view.is_contiguous() && Self::is_acceptable(&mut view).unwrap_or(false) {
                 return Some(view);
             }
         }
@@ -130,7 +130,10 @@ impl WritableInterleavedSamples {
         }
         let view = MemoryView::<f32>::get(val, Flags::simple());
         if let Ok(mut view) = view {
-            if !view.is_readonly() && Self::is_acceptable(&mut view).unwrap_or(false) {
+            if !view.is_readonly()
+                && view.is_contiguous()
+                && Self::is_acceptable(&mut view).unwrap_or(false)
+            {
                 return Some(view);
             }
         }
@@ -194,7 +197,7 @@ impl PlanarSamples {
         }
         let view = MemoryView::<f32>::get(val, Flags::simple());
         if let Ok(mut view) = view {
-            if Self::is_acceptable(&mut view).unwrap_or(false) {
+            if view.is_contiguous() && Self::is_acceptable(&mut view).unwrap_or(false) {
                 return Some(view);
             }
         }
