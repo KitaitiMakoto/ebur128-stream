@@ -61,7 +61,7 @@ impl Deref for Channels {
 impl<'a> From<&'a [engine::Channel]> for Channels {
     fn from(value: &'a [engine::Channel]) -> Self {
         Self {
-            inner: value.to_vec()
+            inner: value.to_vec(),
         }
     }
 }

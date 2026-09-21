@@ -18,12 +18,20 @@ struct Analyzer {
 impl Analyzer {
     fn new(args: &[Value]) -> Result<Self, Error> {
         let args = scan_args::<(), (), (), (), _, ()>(args)?;
-        let kws =
-            get_kwargs::<_, (Channels,), (Option<Option<Integer>>, Option<Option<RArray>>, Option<Option<Integer>>), ()>(
-                args.keywords,
-                &["channels"],
-                &["sample_rate", "modes", "expected_duration"],
-            )?;
+        let kws = get_kwargs::<
+            _,
+            (Channels,),
+            (
+                Option<Option<Integer>>,
+                Option<Option<RArray>>,
+                Option<Option<Integer>>,
+            ),
+            (),
+        >(
+            args.keywords,
+            &["channels"],
+            &["sample_rate", "modes", "expected_duration"],
+        )?;
         let (channels,) = kws.required;
         let (sample_rate, modes, expected_duration) = kws.optional;
 

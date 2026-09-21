@@ -5,9 +5,7 @@ use crate::{
 use magnus::{RArray, Ruby, TryConvert, Value, error::IntoError};
 
 fn is_acceptable_component(component: ItemComponent) -> bool {
-    component.offset == 0
-        && component.repeat == 1
-        && is_acceptable_format(component.format)
+    component.offset == 0 && component.repeat == 1 && is_acceptable_format(component.format)
 }
 
 fn is_acceptable_format(format: char) -> bool {
@@ -20,7 +18,7 @@ fn is_acceptable_format(format: char) -> bool {
         #[cfg(target_endian = "big")]
         'g' => true,
 
-        _ => false
+        _ => false,
     }
 }
 
