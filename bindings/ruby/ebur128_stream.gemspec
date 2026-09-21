@@ -28,7 +28,7 @@ Gem::Specification.new do |spec|
   # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
   spec.files = IO.popen(%w[git ls-files -z], chdir: __dir__, err: IO::NULL) do |ls|
     ls.readlines("\x0", chomp: true)
-  end + ["LICENSE-APACHE", "LICENSE-MIT"]
+  end + ["ext/ebur128_stream/Cargo.lock", "LICENSE-APACHE", "LICENSE-MIT"]
   spec.executables = spec.files.grep(%r{\Abin/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
   spec.extensions = ["ext/ebur128_stream/Cargo.toml"]
