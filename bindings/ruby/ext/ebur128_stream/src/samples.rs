@@ -176,14 +176,15 @@ impl PlanarSamples {
         match self {
             Self::Array { samples } => samples.iter().map(Vec::as_slice).collect(),
             Self::MemoryView { view } => {
-                let shape = view.shape().expect("ndim > 1 is checked when calling ");
-                let n_channels = shape[0];
+                let shape = view.shape().expect(
+                    "ndim == 2 is guaranteed in consume_memory_view() therefore shape exists",
+                );
                 let channel_len = shape[1];
-                if channel_len == 0 {
-                    (0..n_channels).map(|_| &view.data()[..0]).collect()
-                } else {
-                    view.data().chunks_exact(channel_len).collect()
-                }
+                let data = view.data();
+                // The range is safe because view is contiguous
+                (0..shape[0])
+                    .map(|channel| &data[(channel * channel_len)..((channel + 1) * channel_len)])
+                    .collect()
             }
         }
     }
