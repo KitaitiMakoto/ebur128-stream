@@ -124,6 +124,7 @@ impl WritableInterleavedSamples {
     fn consume_memory_view(val: Value) -> Option<MemoryView<f32>> {
         let view = MemoryView::<f32>::get(val, Flags::writable().any_contiguous());
         if let Ok(mut view) = view {
+            // No need to check is_readonly because the flag requires writable
             if Self::is_acceptable(&mut view).unwrap_or(false) {
                 return Some(view);
             }
