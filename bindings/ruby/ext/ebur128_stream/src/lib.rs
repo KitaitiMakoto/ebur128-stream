@@ -12,7 +12,7 @@ use crate::{
     samples::{InterleavedSamples, PlanarSamples},
     snapshot::Snapshot,
 };
-use ebur128_stream_rs as engine;
+use ebur128_stream as engine;
 use magnus::{RArray, Ruby, Symbol, TryConvert, Value};
 use std::ops::Deref;
 

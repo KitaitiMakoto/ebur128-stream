@@ -1,4 +1,4 @@
-use ebur128_stream_rs as engine;
+use ebur128_stream as engine;
 use magnus::{Ruby, error::IntoError};
 
 pub(crate) enum Error {

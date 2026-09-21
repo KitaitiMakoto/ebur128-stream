@@ -1,5 +1,5 @@
 use crate::{Channels, error::Error, samples::WritableInterleavedSamples};
-use ebur128_stream_rs as engine;
+use ebur128_stream as engine;
 use magnus::{
     RModule, Ruby, Value, function, method,
     prelude::*,

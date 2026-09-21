@@ -1,5 +1,5 @@
 use crate::Error;
-use ebur128_stream_rs as engine;
+use ebur128_stream as engine;
 use magnus::{RModule, Ruby, method, prelude::*};
 
 #[magnus::wrap(class = "EBUR128Stream::Snapshot")]

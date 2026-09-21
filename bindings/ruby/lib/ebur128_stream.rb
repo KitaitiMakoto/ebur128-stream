@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "ebur128_stream/version"
-require "ebur128_stream/ebur128_stream"
+require "ebur128_stream/ebur128_stream_ruby"
 
 module EBUR128Stream
   class Error < StandardError; end
