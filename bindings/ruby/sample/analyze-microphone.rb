@@ -16,7 +16,7 @@ LIMIT = -70
 include NDAV::Converter
 
 def main(argv)
-  analyser = setup_ebur128_stream
+  analyzer = setup_ebur128_stream
 
   print "\e[2J"
 
@@ -26,8 +26,8 @@ def main(argv)
     samples = NumoNArray(sample)
     samples.reshape!(*samples.shape.reduce(:*))
 
-    analyser.push_interleaved samples
-    analyser.snapshot => {momentary_lufs:}
+    analyzer.push_interleaved samples
+    analyzer.snapshot => {momentary_lufs:}
     next unless momentary_lufs
 
     render_loudness momentary_lufs

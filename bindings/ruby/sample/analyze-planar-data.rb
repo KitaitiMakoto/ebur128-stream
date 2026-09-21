@@ -7,7 +7,7 @@ def main(argv)
 
   # TorchAudio.load returns planar waveform:
   # [[L1, L2, L3, ...], [R1, R2, R3, ...]]
-  # which is suitable for push_panar
+  # which is suitable for push_planar
   analyzer = EBUR128Stream::Analyzer.new(sample_rate:, channels: [:left, :right])
   analyzer.push_planar waveform
   report = analyzer.finalize
