@@ -227,8 +227,20 @@ impl<T> MemoryView<T> {
         usize::try_from(self.inner.byte_size).expect("byte_size validated in get()")
     }
 
+    pub fn item_size(&self) -> usize {
+        usize::try_from(self.inner.item_size).expect("item_size validated in get()")
+    }
+
     pub fn shape(&self) -> Option<&[usize]> {
         if self.inner.shape.is_null() {
+            return None;
+        }
+        // SAFETY: validated in get()
+        Some(unsafe { slice::from_raw_parts(self.inner.shape.cast::<usize>(), self.ndim()) })
+    }
+
+    pub fn strides(&self) -> Option<&[usize]> {
+        if self.inner.strides.is_null() {
             return None;
         }
         // SAFETY: validated in get()
@@ -283,6 +295,72 @@ impl<T> MemoryView<T> {
         self.prepare_item_desc()?;
         let view: &Self = self;
         ItemDesc::try_from(view)
+    }
+
+    // Implements in Rust because current rb_memory_view_is_row_major_contiguous() has segmentation fault bug
+    // See https://github.com/ruby/ruby/pull/17851
+    pub fn is_row_major_contiguous(&self) -> bool {
+        let Some(strides) = self.strides() else {
+            return true;
+        };
+        let ndim = self.ndim();
+        let mut n = self.item_size();
+        if ndim == 1 {
+            return strides[0] == n;
+        }
+        let shape = self.shape().expect("shape exists when ndim != 1");
+        for i in (0..ndim).rev() {
+            if strides[i] != n {
+                return false;
+            }
+            n *= shape[i];
+        }
+        true
+    }
+
+    // Implements in Rust because current rb_memory_view_is_column_major_contiguous() has segmentation fault bug
+    // See https://github.com/ruby/ruby/pull/17851
+    pub fn is_column_major_contiguous(&self) -> bool {
+        let ndim = self.ndim();
+        match self.strides() {
+            Some(strides) => {
+                let mut n = self.item_size();
+                if ndim == 1 {
+                    return strides[0] == n;
+                }
+                let shape = self.shape().expect("shape exists when ndim != 1");
+                for i in 0..ndim {
+                    if strides[i] != n {
+                        return false;
+                    }
+                    n *= shape[i];
+                }
+                true
+            }
+            None => {
+                if ndim == 1 {
+                    return true;
+                }
+                let Some(shape) = self.shape() else {
+                    return false;
+                };
+
+                let mut trivial = true;
+                for s in shape.iter() {
+                    if *s > 1 {
+                        if !trivial {
+                            return false;
+                        }
+                        trivial = false;
+                    }
+                }
+                true
+            }
+        }
+    }
+
+    pub fn is_contiguous(&self) -> bool {
+        self.is_row_major_contiguous() || self.is_column_major_contiguous()
     }
 
     // Just for validation and retrieving item size
