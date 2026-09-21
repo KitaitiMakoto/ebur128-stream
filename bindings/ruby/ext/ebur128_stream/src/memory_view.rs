@@ -60,54 +60,12 @@ impl Flags {
 }
 
 pub trait FlagsChainable {
-    fn writable(self) -> Self;
-    fn format(self) -> Self;
-    fn multi_dimensional(self) -> Self;
-    fn strides(self) -> Self;
-    fn row_major(self) -> Self;
-    fn column_major(self) -> Self;
     fn any_contiguous(self) -> Self;
-    fn indirect(self) -> Self;
 }
 
 impl FlagsChainable for Flags {
-    fn writable(mut self) -> Self {
-        self.0 |= RUBY_MEMORY_VIEW_WRITABLE as i32;
-        self
-    }
-
-    fn format(mut self) -> Self {
-        self.0 |= RUBY_MEMORY_VIEW_FORMAT as i32;
-        self
-    }
-
-    fn multi_dimensional(mut self) -> Self {
-        self.0 |= RUBY_MEMORY_VIEW_MULTI_DIMENSIONAL as i32;
-        self
-    }
-
-    fn strides(mut self) -> Self {
-        self.0 |= RUBY_MEMORY_VIEW_STRIDES as i32;
-        self
-    }
-
-    fn row_major(mut self) -> Self {
-        self.0 |= RUBY_MEMORY_VIEW_ROW_MAJOR as i32;
-        self
-    }
-
-    fn column_major(mut self) -> Self {
-        self.0 |= RUBY_MEMORY_VIEW_COLUMN_MAJOR as i32;
-        self
-    }
-
     fn any_contiguous(mut self) -> Self {
         self.0 |= RUBY_MEMORY_VIEW_ANY_CONTIGUOUS as i32;
-        self
-    }
-
-    fn indirect(mut self) -> Self {
-        self.0 |= RUBY_MEMORY_VIEW_INDIRECT as i32;
         self
     }
 }
@@ -249,19 +207,6 @@ impl<T> MemoryView<T> {
 
     pub fn is_readonly(&self) -> bool {
         self.inner.readonly
-    }
-
-    pub fn format(&self) -> Option<&str> {
-        if self.inner.format.is_null() {
-            None
-        } else {
-            // SAFETY: format is valid because parse_item_format() is called in get()
-            Some(
-                unsafe { CStr::from_ptr(self.inner.format) }
-                    .to_str()
-                    .unwrap(),
-            )
-        }
     }
 
     pub fn data(&self) -> &[T] {
@@ -440,10 +385,7 @@ impl ItemDesc {
 
 pub struct ItemComponent {
     pub format: char,
-    pub is_native_size: bool,
-    pub is_little_endian: bool,
     pub offset: usize,
-    pub size: usize,
     pub repeat: usize,
 }
 
@@ -451,10 +393,7 @@ impl<'a> From<&'a rb_memory_view_item_component_t> for ItemComponent {
     fn from(value: &'a rb_memory_view_item_component_t) -> Self {
         Self {
             format: char::from(value.format as u8),
-            is_native_size: value.native_size_p,
-            is_little_endian: value.little_endian_p,
             offset: value.offset as usize,
-            size: value.size as usize,
             repeat: value.repeat as usize,
         }
     }
