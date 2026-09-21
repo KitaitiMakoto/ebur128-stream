@@ -227,7 +227,7 @@ To release a new version, update the version number in `version.rb`, and then ru
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/vanjamodrinjak21/ebur128_stream. Mention @KitaitiMakoto for issues and pull requests related to the Ruby binding.
+Bug reports and pull requests are welcome on GitHub at https://github.com/vanjamodrinjak21/ebur128-stream. Mention @KitaitiMakoto for issues and pull requests related to the Ruby binding.
 
 ## License
 
