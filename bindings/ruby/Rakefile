@@ -4,17 +4,25 @@ require "rubygems/tasks"
 require "rake/testtask"
 require "kar/dsl"
 require "rdoc/task"
+require "json"
 
+ENGINE_VERSION = JSON.parse(`cargo metadata --format-version=1 --manifest-path=ext/ebur128_stream/Cargo.toml`)["packages"].find {|package|
+  package["name"] == "ebur128-stream"
+}["version"]
 GEMSPEC = Gem::Specification.load("ebur128_stream.gemspec")
-
+CARGO_TOML = "ext/ebur128_stream/Cargo.toml"
+PKG_DIR = Gem::Tasks::Project::PKG_DIR
 LICENSE_FILES = FileList["LICENSE-APACHE", "LICENSE-MIT"]
 LICENSE_FILES.each do |license|
   file license => "../../#{license}" do |t|
     copy t.source, t.name
   end
 end
+GEM_FILE = File.join(__dir__, PKG_DIR, GEMSPEC.full_name + ".gem")
 
-Gem::Tasks.new
+gemtasks = \
+Gem::Tasks.new(build: {gem: false})
+gemtasks.scm.status.project.instance_variable_set :@scm, :git
 
 cargo "ebur128_stream"
 
@@ -23,9 +31,43 @@ RDoc::Task.new
 
 task default: :test
 
-task sync_version: ["lib/ebur128_stream/version.rb", "ext/ebur128_stream/Cargo.toml"] do |t|
+task sync_version: ["lib/ebur128_stream/version.rb", CARGO_TOML] do |t|
   require_relative t.sources[0]
   sh "cargo", "set-version", "--manifest-path", t.sources[1], "--offline", EBUR128Stream::VERSION
 end
 
-task build: [:sync_version, :cargo] + LICENSE_FILES
+task build: GEM_FILE
+
+directory PKG_DIR
+file GEM_FILE => [:sync_version, :cargo, :validate, PKG_DIR] do |t|
+  require "tmpdir"
+
+  tmpdir = File.realpath(Dir.mktmpdir)
+  sh "git", "worktree", "add", tmpdir, "HEAD"
+  begin
+    chdir File.join(tmpdir, "bindings", "ruby") do
+      sh "cargo", "add", "--manifest-path", CARGO_TOML, "ebur128-stream@#{ENGINE_VERSION}"
+      sh "git", "add", CARGO_TOML
+      env = {
+        "GIT_AUTHOR_NAME" => "test",
+        "GIT_AUTHOR_EMAIL" => "test@example.org",
+        "GIT_COMMITTER_NAME" => "test",
+        "GIT_COMMITTER_EMAIL" => "test@example.org"
+      }
+      sh env, "git", "commit", "--message", "build(ruby): pin crate version"
+      sh "rake", "validate", *LICENSE_FILES
+
+      local_pkg_dir = Gem::Tasks::Project::PKG_DIR
+      mkdir local_pkg_dir
+      Gem::Tasks::Build::Gem.new.build(nil, GEMSPEC)
+      basename = File.basename(t.name)
+
+      move File.join(local_pkg_dir, basename), t.name
+    end
+    sh "git", "worktree", "remove", "--force", tmpdir
+  rescue => err
+    $stderr.puts err
+    $stderr.puts err.backtrace
+    $stderr.puts "Working directory remains at #{tmpdir}"
+  end
+end
