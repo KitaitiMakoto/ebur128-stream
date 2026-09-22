@@ -115,7 +115,10 @@ impl<T> MemoryView<T> {
         // Validation
         let ndim = usize::try_from(view.inner.ndim)
             .map_err(|_| Error::new(ruby.exception_arg_error(), "invalid ndim"))?;
-        usize::try_from(view.inner.byte_size)
+        if ndim == 0 {
+            Err(Error::new(ruby.exception_arg_error(), "ndim is 0"))?;
+        }
+        let byte_size = usize::try_from(view.inner.byte_size)
             .map_err(|_| Error::new(ruby.exception_arg_error(), "invalid byte_size"))?;
         let item_size = usize::try_from(view.inner.item_size)
             .map_err(|_| Error::new(ruby.exception_arg_error(), "invalid item_size"))?;
@@ -140,22 +143,46 @@ impl<T> MemoryView<T> {
                 ))?;
             }
         } else {
-            // SAFETY: rb_memory_view_t.shape is *ssize_t
-            let shape = unsafe { slice::from_raw_parts(view.inner.shape, ndim) };
+            // Alignment has to be checked before the slice is built: slice::from_raw_parts()
+            // requires an aligned pointer as a precondition, so checking afterwards is too late
             if !view.inner.shape.cast::<usize>().is_aligned() {
                 Err(Error::new(
                     ruby.exception_arg_error(),
                     "shape not aligned for usize",
                 ))?;
             }
+            // SAFETY: rb_memory_view_t.shape is *ssize_t, non-NULL and aligned, and has ndim elements
+            let shape = unsafe { slice::from_raw_parts(view.inner.shape, ndim) };
+            let mut n_items: usize = 1;
             for &dim in shape {
-                usize::try_from(dim).map_err(|_| {
+                let dim = usize::try_from(dim).map_err(|_| {
                     Error::new(
                         ruby.exception_arg_error(),
                         format!("dimension {dim} of shape invalid"),
                     )
                 })?;
+                n_items = n_items
+                    .checked_mul(dim)
+                    .ok_or_else(|| Error::new(ruby.exception_arg_error(), "shape too large"))?;
             }
+            // data() hands out byte_size bytes, so shape must not describe more items than that.
+            // Callers index by shape, and this is what keeps those indices inside data().
+            let shape_size = n_items
+                .checked_mul(item_size)
+                .ok_or_else(|| Error::new(ruby.exception_arg_error(), "shape too large"))?;
+            if shape_size > byte_size {
+                Err(Error::new(
+                    ruby.exception_arg_error(),
+                    "byte_size smaller than the size calculated by shape",
+                ))?;
+            }
+        }
+
+        if !view.inner.strides.is_null() && !view.inner.strides.cast::<isize>().is_aligned() {
+            Err(Error::new(
+                ruby.exception_arg_error(),
+                "strides not aligned for isize",
+            ))?;
         }
 
         let data = view.inner.data;
