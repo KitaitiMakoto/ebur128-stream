@@ -29,7 +29,7 @@ def main(argv)
 
   # Restores the samples to planar layout
   out_samples = samples.reshape(shape).transpose(1, 0)
-  TorchAudio.save(output, samples, sample_rate)
+  TorchAudio.save(output, out_samples, sample_rate)
 end
 
 main ARGV
