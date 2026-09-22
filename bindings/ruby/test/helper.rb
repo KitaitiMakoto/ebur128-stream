@@ -6,6 +6,10 @@ require "ebur128_stream"
 require "test-unit"
 require "numo/narray/alt"
 require "ndav/numo/narray"
+require "tempfile"
+require "tmpdir"
+require "tomlrb"
+require "json"
 
 class Test::Unit::TestCase
   def generate_samples
