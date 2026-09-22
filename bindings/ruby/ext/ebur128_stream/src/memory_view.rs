@@ -197,12 +197,12 @@ impl<T> MemoryView<T> {
         Some(unsafe { slice::from_raw_parts(self.inner.shape.cast::<usize>(), self.ndim()) })
     }
 
-    pub fn strides(&self) -> Option<&[usize]> {
+    pub fn strides(&self) -> Option<&[isize]> {
         if self.inner.strides.is_null() {
             return None;
         }
         // SAFETY: validated in get()
-        Some(unsafe { slice::from_raw_parts(self.inner.shape.cast::<usize>(), self.ndim()) })
+        Some(unsafe { slice::from_raw_parts(self.inner.strides.cast::<isize>(), self.ndim()) })
     }
 
     pub fn is_readonly(&self) -> bool {
@@ -251,11 +251,11 @@ impl<T> MemoryView<T> {
         let ndim = self.ndim();
         let mut n = self.item_size();
         if ndim == 1 {
-            return strides[0] == n;
+            return strides[0] == n as isize;
         }
         let shape = self.shape().expect("shape exists when ndim != 1");
         for i in (0..ndim).rev() {
-            if strides[i] != n {
+            if strides[i] != n as isize {
                 return false;
             }
             n *= shape[i];
@@ -271,11 +271,11 @@ impl<T> MemoryView<T> {
             Some(strides) => {
                 let mut n = self.item_size();
                 if ndim == 1 {
-                    return strides[0] == n;
+                    return strides[0] == n as isize;
                 }
                 let shape = self.shape().expect("shape exists when ndim != 1");
                 for i in 0..ndim {
-                    if strides[i] != n {
+                    if strides[i] != n as isize {
                         return false;
                     }
                     n *= shape[i];
@@ -396,5 +396,95 @@ impl<'a> From<&'a rb_memory_view_item_component_t> for ItemComponent {
             offset: value.offset as usize,
             repeat: value.repeat as usize,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::mem::ManuallyDrop;
+
+    // Builds a view over synthetic metadata. Wrapped in ManuallyDrop because there is no
+    // Ruby VM here to release it, and the contiguity predicates never call into Ruby.
+    fn view(
+        ndim: usize,
+        item_size: usize,
+        shape: Option<&[isize]>,
+        strides: Option<&[isize]>,
+    ) -> ManuallyDrop<MemoryView<f32>> {
+        // SAFETY: rb_memory_view_t is plain data and every field read below is set here
+        let mut inner: rb_memory_view_t = unsafe { std::mem::zeroed() };
+        inner.ndim = ndim as _;
+        inner.item_size = item_size as _;
+        inner.shape = shape.map_or(ptr::null(), |s| s.as_ptr().cast());
+        inner.strides = strides.map_or(ptr::null(), |s| s.as_ptr().cast());
+        ManuallyDrop::new(MemoryView {
+            inner,
+            marker: PhantomData,
+        })
+    }
+
+    #[test]
+    fn strides_reads_strides_not_shape() {
+        let shape = [2isize, 100];
+        let strides = [400isize, 4];
+        let v = view(2, 4, Some(&shape), Some(&strides));
+        assert_eq!(v.strides(), Some(&strides[..]));
+        assert_eq!(v.shape(), Some(&[2usize, 100][..]));
+    }
+
+    #[test]
+    fn one_dimension_without_strides_is_contiguous() {
+        let v = view(1, 4, None, None);
+        assert!(v.is_row_major_contiguous());
+        assert!(v.is_contiguous());
+    }
+
+    #[test]
+    fn one_dimension_with_gaps_is_not_contiguous() {
+        // 4 items of 4 bytes, but 8 bytes apart. Reading this linearly would take in
+        // whatever sits between the items.
+        let shape = [4isize];
+        let strides = [8isize];
+        let v = view(1, 4, Some(&shape), Some(&strides));
+        assert!(!v.is_row_major_contiguous());
+        assert!(!v.is_contiguous());
+    }
+
+    #[test]
+    fn row_major_two_dimensions() {
+        let shape = [2isize, 100];
+        let strides = [400isize, 4];
+        let v = view(2, 4, Some(&shape), Some(&strides));
+        assert!(v.is_row_major_contiguous());
+        assert!(v.is_contiguous());
+    }
+
+    #[test]
+    fn column_major_is_contiguous_but_not_row_major() {
+        let shape = [2isize, 100];
+        let strides = [4isize, 8];
+        let v = view(2, 4, Some(&shape), Some(&strides));
+        assert!(!v.is_row_major_contiguous());
+        assert!(v.is_column_major_contiguous());
+        assert!(v.is_contiguous());
+    }
+
+    #[test]
+    fn strided_two_dimensions_is_not_contiguous() {
+        let shape = [2isize, 100];
+        let strides = [800isize, 8];
+        let v = view(2, 4, Some(&shape), Some(&strides));
+        assert!(!v.is_row_major_contiguous());
+        assert!(!v.is_column_major_contiguous());
+        assert!(!v.is_contiguous());
+    }
+
+    #[test]
+    fn negative_strides_are_not_contiguous() {
+        let shape = [2isize, 100];
+        let strides = [-400isize, -4];
+        let v = view(2, 4, Some(&shape), Some(&strides));
+        assert!(!v.is_contiguous());
     }
 }
