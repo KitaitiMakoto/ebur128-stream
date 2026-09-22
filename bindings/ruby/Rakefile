@@ -65,9 +65,11 @@ file GEM_FILE => [:sync_version, :cargo, :validate, PKG_DIR] do |t|
       move File.join(local_pkg_dir, basename), t.name
     end
     sh "git", "worktree", "remove", "--force", tmpdir
-  rescue => err
-    $stderr.puts err
-    $stderr.puts err.backtrace
-    $stderr.puts "Working directory remains at #{tmpdir}"
+  rescue
+    # The worktree is deliberately left in place so the failure can be inspected,
+    # but the error has to propagate: swallowing it lets `rake build` exit 0
+    # without having produced a gem.
+    $stderr.puts "Build failed. Working directory remains at #{tmpdir}"
+    raise
   end
 end
