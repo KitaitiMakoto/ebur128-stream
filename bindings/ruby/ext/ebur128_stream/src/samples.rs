@@ -197,7 +197,9 @@ impl PlanarSamples {
         }
         let view = MemoryView::<f32>::get(val, Flags::simple());
         if let Ok(mut view) = view {
-            if view.is_contiguous() && Self::is_acceptable(&mut view).unwrap_or(false) {
+            // Row major specifically: channel_slices() reads each channel as a contiguous
+            // chunk, which a column major contiguous view would silently violate
+            if view.is_row_major_contiguous() && Self::is_acceptable(&mut view).unwrap_or(false) {
                 return Some(view);
             }
         }
