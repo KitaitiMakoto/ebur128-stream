@@ -33,6 +33,25 @@ jobs:
       - run: cargo build --no-default-features
       - run: cargo build --no-default-features --features alloc
 
+  test-ruby:
+    name: test (ruby)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bindings/ruby
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo install cargo-edit
+      - uses: Swatinem/rust-cache@v2
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 4.0
+          bundler-cache: true
+          working-directory: bindings/ruby
+      - run: cargo generate-lockfile --manifest-path ext/ebur128_stream/Cargo.toml
+      - run: bundle exec rake
+
   doctest:
     name: doctest
     runs-on: ubuntu-latest
