@@ -53,7 +53,9 @@ impl InterleavedSamples {
     fn consume_memory_view(val: Value) -> Option<MemoryView<f32>> {
         let view = MemoryView::<f32>::get(val, Flags::any_contiguous());
         if let Ok(mut view) = view {
-            if Self::is_acceptable(&mut view).unwrap_or(false) {
+            // The flags say what we can accept, not what we got: a provider is free to
+            // hand back a view that does not honour them, so check the layout ourselves
+            if view.is_contiguous() && Self::is_acceptable(&mut view).unwrap_or(false) {
                 return Some(view);
             }
         }
@@ -122,8 +124,12 @@ impl WritableInterleavedSamples {
     fn consume_memory_view(val: Value) -> Option<MemoryView<f32>> {
         let view = MemoryView::<f32>::get(val, Flags::writable().any_contiguous());
         if let Ok(mut view) = view {
-            // No need to check is_readonly because the flag requires writable
-            if Self::is_acceptable(&mut view).unwrap_or(false) {
+            // Same reasoning as the SIMPLE branch below: the requested flags are not a
+            // guarantee, so re-check writability and layout rather than trusting them
+            if !view.is_readonly()
+                && view.is_contiguous()
+                && Self::is_acceptable(&mut view).unwrap_or(false)
+            {
                 return Some(view);
             }
         }
@@ -191,7 +197,8 @@ impl PlanarSamples {
     fn consume_memory_view(val: Value) -> Option<MemoryView<f32>> {
         let view = MemoryView::<f32>::get(val, Flags::row_major());
         if let Ok(mut view) = view {
-            if Self::is_acceptable(&mut view).unwrap_or(false) {
+            // ROW_MAJOR was requested, but verify it: see the SIMPLE branch below
+            if view.is_row_major_contiguous() && Self::is_acceptable(&mut view).unwrap_or(false) {
                 return Some(view);
             }
         }
