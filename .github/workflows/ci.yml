@@ -42,13 +42,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo install cargo-edit
       - uses: Swatinem/rust-cache@v2
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: 4.0
           bundler-cache: true
           working-directory: bindings/ruby
+      - run: cargo install cargo-edit
       - run: cargo generate-lockfile --manifest-path ext/ebur128_stream/Cargo.toml
       - run: bundle exec rake
 
