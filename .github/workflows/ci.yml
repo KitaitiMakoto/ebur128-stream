@@ -34,8 +34,11 @@ jobs:
       - run: cargo build --no-default-features --features alloc
 
   test-ruby:
-    name: test (ruby)
+    name: test (ruby ${{ matrix.ruby }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ruby: ["3.2", "3.3", "3.4", "4.0"]
     defaults:
       run:
         working-directory: bindings/ruby
@@ -48,7 +51,7 @@ jobs:
             bindings/ruby/ext/ebur128_stream -> target
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 4.0
+          ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
           working-directory: bindings/ruby
       - run: cargo install cargo-edit
