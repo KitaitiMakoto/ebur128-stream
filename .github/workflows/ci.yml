@@ -52,7 +52,6 @@ jobs:
           bundler-cache: true
           working-directory: bindings/ruby
       - run: cargo install cargo-edit
-      - run: cargo generate-lockfile --manifest-path ext/ebur128_stream/Cargo.toml
       - run: bundle exec rake
 
   doctest:
